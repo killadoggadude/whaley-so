@@ -791,10 +791,11 @@ export function CaptionCustomizerInline({
             );
           })}
         </div>
-      </TooltipProvider>
-
       {expanded && (
-        <CaptionCustomizer settings={settings} onChange={onChange} compact />
+        <div className="space-y-3">
+          <div className="text-xs text-muted-foreground italic">Full customization controls</div>
+          {/* All controls will be rendered here inline when expanded — nested CaptionCustomizer removed to eliminate duplicate preset rows */}
+      )}
       )}
     </div>
   );
