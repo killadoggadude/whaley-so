@@ -483,6 +483,7 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const addCaptionsToJob = useCallback(async (jobId: string, videoUrl: string, audioUrl: string, customSettingsOverride?: CustomCaptionSettings) => {
     updateJob(jobId, { status: "captioning" });
     try {
+      // Step 1: Transcribe audio to get word timestamps
       const transcribeRes = await fetch("/api/talking-head/transcribe-audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -491,11 +492,14 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
       const transcribeData = await transcribeRes.json();
 
       if (!transcribeRes.ok || !transcribeData.words?.length) {
-        console.error("Caption transcription failed:", transcribeData.error);
+        const reason = transcribeData.error || "No word timestamps returned";
+        console.error("Caption transcription failed:", reason);
+        toast.warning(`Captions skipped: transcription failed — ${reason}`);
         updateJob(jobId, { status: "completed", videoUrl });
         return;
       }
 
+      // Step 2: Burn captions into video via FFmpeg
       const captionRes = await fetch("/api/talking-head/add-captions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -504,14 +508,18 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
       const captionData = await captionRes.json();
 
       if (!captionRes.ok) {
-        console.error("Caption burn-in failed:", captionData.error);
-        updateJob(jobId, { status: "completed", videoUrl });
+        const reason = captionData.error || "Unknown error";
+        console.error("Caption burn-in failed:", reason);
+        toast.warning(`Captions skipped: burn-in failed — ${reason}`);
+        updateJob(jobId, { status: "completed", videoUrl, words: transcribeData.words });
         return;
       }
 
       updateJob(jobId, { status: "completed", captionedVideoUrl: captionData.signedUrl, videoAssetId: captionData.assetId, words: transcribeData.words });
     } catch (err) {
+      const reason = err instanceof Error ? err.message : "Unknown error";
       console.error("Caption error:", err);
+      toast.warning(`Captions skipped: ${reason}`);
       updateJob(jobId, { status: "completed", videoUrl });
     }
   }, [captionSettings]);
