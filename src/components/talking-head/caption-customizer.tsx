@@ -6,7 +6,6 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -616,7 +615,7 @@ className={cn(
 
 /**
  * Compact inline caption customizer for use inside other components.
- * Shows a collapsible panel with just the key controls.
+ * Renders the full CaptionCustomizer in compact mode directly — no toggle needed.
  */
 export function CaptionCustomizerInline({
   settings,
@@ -625,37 +624,6 @@ export function CaptionCustomizerInline({
   settings: CustomCaptionSettings;
   onChange: (settings: CustomCaptionSettings) => void;
 }) {
-  const [savedPresets, setSavedPresets] = useState<CaptionPreset[]>([]);
-  const [showPresetSave, setShowPresetSave] = useState(false);
-  const [presetName, setPresetName] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Fetch saved presets on mount
-  useEffect(() => {
-    getCaptionPresetsAction().then(({ presets }) => setSavedPresets(presets));
-  }, []);
-
-  const handleSavePreset = async () => {
-    if (!presetName.trim()) return;
-
-    setIsSaving(true);
-    try {
-      const { preset } = await saveCaptionPresetAction(presetName.trim(), settings as any);
-      if (preset) {
-        setShowPresetSave(false);
-        setPresetName("");
-        const { presets: updated } = await getCaptionPresetsAction();
-        setSavedPresets(updated);
-      }
-    } catch {
-      // Error handled by action
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Use full CaptionCustomizer when expanded is needed
-  // For inline use, just render everything directly
   return (
     <CaptionCustomizer settings={settings} onChange={onChange} compact />
   );
