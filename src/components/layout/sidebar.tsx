@@ -11,6 +11,7 @@ import {
   Sparkles,
   Flame,
   Video,
+  Music,
 } from "lucide-react";
 
 const navItems = [
@@ -43,6 +44,11 @@ const navItems = [
     title: "Talking Head",
     href: "/dashboard/tools/talking-head",
     icon: Video,
+  },
+  {
+    title: "Dancing Reel",
+    href: "/dashboard/tools/dancing-reel",
+    icon: Music,
   },
   {
     title: "Settings",
