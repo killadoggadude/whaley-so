@@ -625,7 +625,6 @@ export function CaptionCustomizerInline({
   settings: CustomCaptionSettings;
   onChange: (settings: CustomCaptionSettings) => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const [savedPresets, setSavedPresets] = useState<CaptionPreset[]>([]);
   const [showPresetSave, setShowPresetSave] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -655,148 +654,9 @@ export function CaptionCustomizerInline({
     }
   };
 
+  // Use full CaptionCustomizer when expanded is needed
+  // For inline use, just render everything directly
   return (
-    <div className="rounded-lg bg-card p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Palette className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium">Caption Style</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowPresetSave(true)}
-            className="text-xs"
-            disabled={isSaving}
-          >
-            <Save className="h-3 w-3 mr-1" />
-            Save
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setExpanded(!expanded)}
-            className="text-xs"
-          >
-            {expanded ? "Collapse" : "Customize"}
-          </Button>
-        </div>
-      </div>
-
-      {showPresetSave && (
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Preset name..."
-            value={presetName}
-            onChange={(e) => setPresetName(e.target.value)}
-            className="h-8 text-xs"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSavePreset();
-              if (e.key === "Escape") setShowPresetSave(false);
-            }}
-          />
-          <Button
-            size="sm"
-            onClick={handleSavePreset}
-            disabled={!presetName.trim() || isSaving}
-            className="h-8 text-xs"
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setShowPresetSave(false);
-              setPresetName("");
-            }}
-            className="h-8 text-xs"
-          >
-            Cancel
-          </Button>
-        </div>
-      )}
-
-      {/* Quick presets always visible */}
-      <TooltipProvider>
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {CAPTION_PRESETS.map((preset) => {
-            const isActive = JSON.stringify(settings) === JSON.stringify(preset.settings);
-            return (
-              <Tooltip key={preset.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...preset.settings })}
-                    className={cn(
-                      "relative flex-shrink-0 rounded-md border-2 px-2 py-1 text-[10px] font-medium transition-all",
-                      isActive
-                        ? "border-accent-blue bg-accent-blue/5"
-                        : "border-solid border-border bg-muted/50 hover:border-muted-foreground/30"
-                    )}
-                  >
-                    {isActive && (
-                      <Badge
-                        variant="default"
-                        className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 p-0 flex items-center justify-center"
-                      >
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                      </Badge>
-                    )}
-                    {preset.name}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="p-0">
-                  <MiniPreview presetSettings={preset.settings} />
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-          {savedPresets.map((preset) => {
-            const presetSettings = preset.settings as unknown as CustomCaptionSettings;
-            const isActive = JSON.stringify(settings) === JSON.stringify(presetSettings);
-            return (
-              <Tooltip key={preset.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => onChange({ ...presetSettings })}
-                    className={cn(
-                      "relative flex-shrink-0 rounded-md border-2 px-2 py-1 text-[10px] font-medium transition-all group",
-                      isActive
-                        ? "border-accent-blue bg-accent-blue/5"
-                        : "border-dashed border-border bg-muted/50 hover:border-muted-foreground/30"
-                    )}
-                  >
-                    {isActive && (
-                      <Badge
-                        variant="default"
-                        className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 p-0 flex items-center justify-center"
-                      >
-                        <CheckCircle2 className="h-2.5 w-2.5" />
-                      </Badge>
-                    )}
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                      <span className="truncate max-w-[80px]">{preset.name}</span>
-                    </div>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="p-0">
-                  <MiniPreview presetSettings={presetSettings} />
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
-      {expanded && (
-        <div className="space-y-3">
-          <div className="text-xs text-muted-foreground italic">Full customization controls</div>
-          {/* All controls will be rendered here inline when expanded — nested CaptionCustomizer removed to eliminate duplicate preset rows */}
-      )}
-      )}
-    </div>
+    <CaptionCustomizer settings={settings} onChange={onChange} compact />
   );
 }
