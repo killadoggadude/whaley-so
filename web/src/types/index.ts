@@ -28,6 +28,7 @@ export type {
   GenerationType,
   QueueStatus,
   GenerationQueue,
+  CaptionPreset,
 } from "./database";
 
 export { ASPECT_RATIOS, WAVESPEED_MODELS, ASPECT_RATIO_TO_SIZE, DEFAULT_GENERATION_SETTINGS } from "./database";
