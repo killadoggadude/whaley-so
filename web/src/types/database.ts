@@ -258,3 +258,14 @@ export interface GenerationQueue {
   updated_at: string;
 }
 
+
+// ----- Caption Presets (User-Saved Caption Styles) -----
+
+export interface CaptionPreset {
+  id: string;
+  user_id: string;
+  name: string;
+  settings: Record<string, unknown>; // CustomCaptionSettings as JSONB
+  created_at: string;
+  updated_at: string;
+}

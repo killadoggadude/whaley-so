@@ -44,6 +44,7 @@ export interface CustomCaptionSettings {
   italic: boolean;
   wordsPerPage: number;      // 2-8
   position: "bottom" | "center" | "top";
+  verticalPosition: number;  // 0-100, percentage from top (0=top, 50=center, 100=bottom)
 }
 
 /**
@@ -78,6 +79,7 @@ export const DEFAULT_CAPTION_SETTINGS: CustomCaptionSettings = {
   italic: false,
   wordsPerPage: 3,
   position: "center",
+  verticalPosition: 50,
 };
 
 /**
@@ -107,6 +109,7 @@ export const CAPTION_PRESETS: Array<{
       italic: false,
       wordsPerPage: 2,
       position: "center",
+      verticalPosition: 50,
     },
     previewBg: "bg-black",
     previewText: "text-white",
@@ -128,6 +131,7 @@ export const CAPTION_PRESETS: Array<{
       italic: false,
       wordsPerPage: 2,
       position: "center",
+      verticalPosition: 50,
     },
     previewBg: "bg-black",
     previewText: "text-white",
@@ -149,6 +153,7 @@ export const CAPTION_PRESETS: Array<{
       italic: false,
       wordsPerPage: 3,
       position: "center",
+      verticalPosition: 50,
     },
     previewBg: "bg-black",
     previewText: "text-white",
@@ -170,6 +175,7 @@ export const CAPTION_PRESETS: Array<{
       italic: false,
       wordsPerPage: 3,
       position: "center",
+      verticalPosition: 50,
     },
     previewBg: "bg-black",
     previewText: "text-white",
@@ -191,6 +197,7 @@ export const CAPTION_PRESETS: Array<{
       italic: false,
       wordsPerPage: 2,
       position: "center",
+      verticalPosition: 50,
     },
     previewBg: "bg-black",
     previewText: "text-white",
@@ -212,6 +219,7 @@ export const CAPTION_PRESETS: Array<{
       italic: false,
       wordsPerPage: 3,
       position: "bottom",
+      verticalPosition: 70,
     },
     previewBg: "bg-black",
     previewText: "text-white",
@@ -266,8 +274,13 @@ function customSettingsToStyle(
   previewText: string = "text-white",
   previewHighlight: string = "text-yellow-400"
 ): CaptionStyle {
-  const marginV = settings.position === "top" ? 60 : settings.position === "center" ? 400 : 60;
-  const alignment = settings.position === "top" ? 8 : settings.position === "center" ? 5 : 2;
+  // Calculate marginV and alignment from verticalPosition
+  // PlayResY is 1920 (9:16 portrait). For alignment 2 (bottom), marginV is distance from bottom.
+  const marginV = Math.round((1 - settings.verticalPosition / 100) * 1920);
+  
+  // Determine alignment based on verticalPosition zone
+  // 8 = top-center, 5 = center, 2 = bottom-center
+  const alignment = settings.verticalPosition <= 33 ? 8 : settings.verticalPosition <= 66 ? 5 : 2;
 
   return {
     id,

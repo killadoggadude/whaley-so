@@ -34,14 +34,10 @@ function MiniPreview({ presetSettings }: { presetSettings: CustomCaptionSettings
       className="relative rounded-lg overflow-hidden bg-gradient-to-b from-gray-800 via-gray-900 to-black"
       style={{ width: "70px", height: "120px" }}
     >
-      {/* Caption preview positioned based on settings */}
+      {/* Caption preview positioned based on verticalPosition */}
       <div
-        className={cn(
-          "absolute left-0 right-0 flex items-center justify-center px-2",
-          presetSettings.position === "top" && "top-[10%]",
-          presetSettings.position === "center" && "top-1/2 -translate-y-1/2",
-          presetSettings.position === "bottom" && "bottom-[10%]"
-        )}
+        className="absolute left-0 right-0 flex items-center justify-center px-2"
+        style={{ top: `${presetSettings.verticalPosition}%`, transform: "translateY(-50%)" }}
       >
         <div
           className="inline-block px-1.5 py-0.5 rounded"
@@ -178,14 +174,10 @@ export function CaptionCustomizer({
           {/* Dark video-like background */}
           <div className="absolute inset-0 bg-gradient-to-b from-gray-800 via-gray-900 to-black" />
 
-          {/* Caption preview positioned based on settings */}
+          {/* Caption preview positioned based on verticalPosition */}
           <div
-            className={cn(
-              "absolute left-0 right-0 flex items-center justify-center px-4",
-              settings.position === "top" && "top-[10%]",
-              settings.position === "center" && "top-1/2 -translate-y-1/2",
-              settings.position === "bottom" && "bottom-[10%]"
-            )}
+            className="absolute left-0 right-0 flex items-center justify-center px-4"
+            style={{ top: `${settings.verticalPosition}%`, transform: "translateY(-50%)" }}
           >
             <div
               className="inline-block px-3 py-1.5 rounded"
@@ -404,7 +396,12 @@ export function CaptionCustomizer({
         {/* Position */}
         <div className="space-y-1.5">
           <Label className="text-xs">Position</Label>
-          <Select value={settings.position} onValueChange={(v) => update({ position: v as CustomCaptionSettings["position"] })}>
+          <Select value={settings.position} onValueChange={(v) => {
+            // Sync dropdown with verticalPosition
+            const newPos = v as CustomCaptionSettings["position"];
+            const vPos = newPos === "top" ? 20 : newPos === "center" ? 50 : 70;
+            update({ position: newPos, verticalPosition: vPos });
+          }}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue />
             </SelectTrigger>
@@ -414,6 +411,30 @@ export function CaptionCustomizer({
               <SelectItem value="top">Top</SelectItem>
             </SelectContent>
           </Select>
+
+          {/* Vertical position slider (0 = top, 100 = bottom) */}
+          <div className="flex items-center gap-2 pt-1">
+            <span className="text-[10px] text-muted-foreground w-3">Top</span>
+            <Slider
+              value={[settings.verticalPosition]}
+              onValueChange={([v]) => {
+                // Update verticalPosition and sync dropdown to nearest position
+                const pos = v <= 33 ? "top" : v <= 66 ? "center" : "bottom";
+                update({ verticalPosition: v, position: pos });
+
+                // Also update internal position tracking if slider changes outside preset zones
+                activePresetId && setActivePresetId(null);
+              }}
+              min={0}
+              max={100}
+              step={1}
+              className="flex-1"
+            />
+            <span className="text-[10px] text-muted-foreground w-3">Btm</span>
+          </div>
+          <div className="text-center">
+            <span className="text-[10px] text-muted-foreground">{Math.round(settings.verticalPosition)}%</span>
+          </div>
         </div>
 
         {/* Bold & Italic toggles */}
