@@ -252,6 +252,22 @@ function runFFmpeg(
       `ass='${escapedAssPath}'`,
       "-c:a",
       "copy",
+      // Strip all existing metadata (removes AI generation markers)
+      "-map_metadata",
+      "-1",
+      // Inject fake iPhone 14 metadata
+      "-metadata",
+      "com.apple.quicktime.make=Apple",
+      "-metadata",
+      "com.apple.quicktime.model=iPhone 14",
+      "-metadata",
+      "com.apple.quicktime.software=17.4.1",
+      "-metadata",
+      "com.apple.quicktime.creationdate=" + new Date().toISOString(),
+      "-metadata",
+      "encoder=Apple iPhone 14",
+      "-metadata",
+      "creation_time=" + new Date().toISOString(),
       "-y",
       outputPath,
     ];
