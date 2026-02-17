@@ -46,6 +46,7 @@ import {
 import type { WordTimestamp } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import { getAssetsAction } from "@/app/dashboard/assets/actions";
 import type { AiModelWithImages, AssetWithUrl } from "@/types";
 
@@ -194,6 +195,10 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
     }
   };
 
+  /**
+   * Upload a single image directly to Supabase Storage from the browser.
+   * Bypasses the API route to avoid Vercel's 4.5MB body limit.
+   */
   const handleImageUpload = async (file: File, targetJobId?: string) => {
     if (!file || !file.type.startsWith("image/")) return null;
     if (file.size > 50 * 1024 * 1024) {
@@ -203,19 +208,55 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("tags", JSON.stringify(["talking-head", "portrait"]));
-
-      const res = await fetch("/api/assets/upload", { method: "POST", body: formData });
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.error || "Upload failed");
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Not authenticated");
         return null;
       }
 
-      const uploaded = { id: data.asset.id, url: data.asset.signed_url };
+      // Upload directly to Supabase Storage
+      const uuid = crypto.randomUUID();
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `${user.id}/image/${uuid}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(filePath, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) {
+        toast.error(`Upload failed: ${uploadError.message}`);
+        return null;
+      }
+
+      // Create asset record in DB
+      const { data: asset, error: dbError } = await supabase
+        .from("assets")
+        .insert({
+          user_id: user.id,
+          filename: file.name,
+          file_path: filePath,
+          file_type: "image",
+          mime_type: file.type,
+          file_size: file.size,
+          tags: ["talking-head", "portrait"],
+          metadata: {},
+        })
+        .select("id")
+        .single();
+
+      if (dbError) {
+        await supabase.storage.from("assets").remove([filePath]);
+        toast.error(`Database error: ${dbError.message}`);
+        return null;
+      }
+
+      // Get signed URL
+      const { data: urlData } = await supabase.storage
+        .from("assets")
+        .createSignedUrl(filePath, 3600);
+
+      const uploaded = { id: asset.id, url: urlData?.signedUrl || "" };
       const jobIdToUpdate = targetJobId || pickerJobId;
       if (jobIdToUpdate) {
         updateJob(jobIdToUpdate, { imageId: uploaded.id, imageUrl: uploaded.url });
@@ -266,8 +307,20 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
     await handleImageUpload(file, jobId);
   };
 
+  /**
+   * Upload multiple images directly to Supabase Storage from the browser.
+   * Uses concurrency limit of 3 and bypasses the API route body size limit.
+   */
   const uploadBulkImages = async (files: File[] | FileList) => {
     setBulkUploading(true);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("Not authenticated");
+      setBulkUploading(false);
+      return;
+    }
 
     // Validate and collect eligible files
     const validFiles: File[] = [];
@@ -286,7 +339,7 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
       return;
     }
 
-    // Upload with concurrency limit of 3 to avoid overwhelming the API
+    // Upload with concurrency limit of 3
     const CONCURRENCY = 3;
     const uploadedImages: Array<{ id: string; url: string }> = [];
     let failedCount = 0;
@@ -296,17 +349,42 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
       const batchResults = await Promise.all(
         batch.map(async (file) => {
           try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("tags", JSON.stringify(["talking-head", "portrait"]));
+            const uuid = crypto.randomUUID();
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            const filePath = `${user.id}/image/${uuid}_${safeName}`;
 
-            const res = await fetch("/api/assets/upload", { method: "POST", body: formData });
-            const data = await res.json();
+            const { error: uploadError } = await supabase.storage
+              .from("assets")
+              .upload(filePath, file, { contentType: file.type, upsert: false });
 
-            if (res.ok && data.asset?.id && data.asset?.signed_url) {
-              return { id: data.asset.id, url: data.asset.signed_url };
+            if (uploadError) return null;
+
+            const { data: asset, error: dbError } = await supabase
+              .from("assets")
+              .insert({
+                user_id: user.id,
+                filename: file.name,
+                file_path: filePath,
+                file_type: "image",
+                mime_type: file.type,
+                file_size: file.size,
+                tags: ["talking-head", "portrait"],
+                metadata: {},
+              })
+              .select("id")
+              .single();
+
+            if (dbError) {
+              await supabase.storage.from("assets").remove([filePath]);
+              return null;
             }
-            return null;
+
+            const { data: urlData } = await supabase.storage
+              .from("assets")
+              .createSignedUrl(filePath, 3600);
+
+            if (!urlData?.signedUrl) return null;
+            return { id: asset.id, url: urlData.signedUrl };
           } catch {
             return null;
           }
