@@ -268,9 +268,9 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
   const uploadBulkImages = async (files: File[] | FileList) => {
     setBulkUploading(true);
-    let uploadedCount = 0;
-    const uploadPromises = [];
 
+    // Validate and collect eligible files
+    const validFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (!file.type.startsWith("image/")) continue;
@@ -278,9 +278,23 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
         toast.error(`File "${file.name}" exceeds 50MB limit`);
         continue;
       }
+      validFiles.push(file);
+    }
 
-      uploadPromises.push(
-        (async () => {
+    if (validFiles.length === 0) {
+      setBulkUploading(false);
+      return;
+    }
+
+    // Upload with concurrency limit of 3 to avoid overwhelming the API
+    const CONCURRENCY = 3;
+    const uploadedImages: Array<{ id: string; url: string }> = [];
+    let failedCount = 0;
+
+    for (let i = 0; i < validFiles.length; i += CONCURRENCY) {
+      const batch = validFiles.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.all(
+        batch.map(async (file) => {
           try {
             const formData = new FormData();
             formData.append("file", file);
@@ -289,38 +303,31 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
             const res = await fetch("/api/assets/upload", { method: "POST", body: formData });
             const data = await res.json();
 
-            if (res.ok) {
-              return { id: data.asset.id };
+            if (res.ok && data.asset?.id && data.asset?.signed_url) {
+              return { id: data.asset.id, url: data.asset.signed_url };
             }
             return null;
           } catch {
             return null;
           }
-        })()
+        })
       );
+
+      for (const result of batchResults) {
+        if (result) {
+          uploadedImages.push(result);
+        } else {
+          failedCount++;
+        }
+      }
     }
 
-    const results = await Promise.all(uploadPromises);
-    const uploadedAssets = results.filter(Boolean) as Array<{ id: string }>;
-
-    if (uploadedAssets.length > 0) {
-      const assetIds = uploadedAssets.map(a => a.id).join(',');
-      const result = await getAssetsAction({
-        file_type: "image",
-        ids: assetIds,
-        limit: uploadedAssets.length,
-        offset: 0,
-      });
-
-      const uploadedImages = result.assets.map(asset => ({ id: asset.id, url: asset.signed_url })).filter(img => img.url);
-      
-      if (uploadedImages.length > 0) {
-        setBulkImagePool((prev) => [...prev, ...uploadedImages]);
-        uploadedCount = uploadedImages.length;
-        toast.success(`${uploadedCount} image${uploadedCount === 1 ? '' : 's'} uploaded to pool`);
+    if (uploadedImages.length > 0) {
+      setBulkImagePool((prev) => [...prev, ...uploadedImages]);
+      toast.success(`${uploadedImages.length} image${uploadedImages.length === 1 ? '' : 's'} uploaded to pool`);
+      if (failedCount > 0) {
+        toast.error(`${failedCount} image${failedCount === 1 ? '' : 's'} failed to upload`);
       }
-    } else if (uploadedAssets.length > 0) {
-      toast.error("Images uploaded but failed to get signed URLs");
     } else {
       toast.error("Failed to upload images");
     }

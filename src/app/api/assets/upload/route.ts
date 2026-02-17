@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getFileType, isAllowedMimeType, isAllowedFileSize } from "@/lib/storage";
 
+export const maxDuration = 60; // 60s for large file uploads to Supabase
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -87,7 +89,18 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ asset: data }, { status: 201 });
+    // Generate signed URL so callers can use the asset immediately
+    let signed_url = "";
+    try {
+      const { data: urlData } = await supabase.storage
+        .from("assets")
+        .createSignedUrl(filePath, 3600); // 1 hour
+      signed_url = urlData?.signedUrl || "";
+    } catch {
+      // Non-fatal: caller can still use the asset ID
+    }
+
+    return NextResponse.json({ asset: { ...data, signed_url } }, { status: 201 });
   } catch (error) {
     console.error("Asset upload error:", error);
     return NextResponse.json(
