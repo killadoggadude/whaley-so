@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "whaley.so",
+  title: "thirst.so",
   description: "AI-powered content creation and management tool",
 };
 
