@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { execFile } from "child_process";
-import { writeFile, readFile, unlink, mkdtemp, access } from "fs/promises";
+import { writeFile, readFile, unlink, mkdtemp, access, copyFile, readdir } from "fs/promises";
 import { join, resolve } from "path";
 import { tmpdir } from "os";
 import { generateASS, generateASSFromCustom, getCaptionStyle } from "@/lib/caption-styles";
@@ -103,6 +103,25 @@ export async function POST(request: Request) {
     const inputPath = join(tempDir, "input.mp4");
     const assPath = join(tempDir, "subs.ass");
     const outputPath = join(tempDir, "output.mp4");
+    const fontDir = join(tempDir, "fonts");
+
+    // Copy bundled fonts to temp directory so FFmpeg's ass filter can find them
+    // (Vercel serverless has no system fonts installed)
+    const projectFontsDir = join(process.cwd(), "fonts");
+    try {
+      const { mkdir } = await import("fs/promises");
+      await mkdir(fontDir, { recursive: true });
+      const fontFiles = await readdir(projectFontsDir);
+      for (const fontFile of fontFiles) {
+        if (fontFile.endsWith(".ttf") || fontFile.endsWith(".otf")) {
+          await copyFile(join(projectFontsDir, fontFile), join(fontDir, fontFile));
+        }
+      }
+      console.log(`Copied ${fontFiles.length} font files to ${fontDir}`);
+    } catch (fontErr) {
+      console.warn("Could not copy fonts to temp dir:", fontErr);
+      // Continue anyway — FFmpeg may still find system fonts
+    }
 
     // 1. Download video to temp file
     const videoResponse = await fetch(videoUrl);
@@ -117,7 +136,7 @@ export async function POST(request: Request) {
     await writeFile(inputPath, videoBuffer);
 
     // 2. Generate ASS subtitle content
-    const assContent = customSettings
+    let assContent = customSettings
       ? generateASSFromCustom(words, customSettings)
       : generateASS(words, getCaptionStyle(styleId!));
     if (!assContent) {
@@ -126,11 +145,20 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Replace any font family in the ASS Style line with our bundled font.
+    // Vercel serverless has no system fonts — only our bundled Liberation Sans.
+    // Liberation Sans is metrically identical to Arial so sizing stays correct.
+    assContent = assContent.replace(
+      /^(Style: Default,)[^,]+(,.*)$/m,
+      "$1Liberation Sans$2"
+    );
+
     await writeFile(assPath, assContent, "utf-8");
 
     // 3. Run FFmpeg to burn subtitles into video
     const ffmpegBinary = await getFFmpegPath();
-    await runFFmpeg(ffmpegBinary, inputPath, assPath, outputPath);
+    await runFFmpeg(ffmpegBinary, inputPath, assPath, outputPath, fontDir);
 
     // 4. Read output video
     const outputBuffer = await readFile(outputPath);
@@ -216,6 +244,18 @@ export async function POST(request: Request) {
             // File may not exist, ignore
           }
         }
+        // Clean up font directory
+        const fontDirPath = join(tempDir, "fonts");
+        try {
+          const fontFiles = await readdir(fontDirPath);
+          for (const f of fontFiles) {
+            try { await unlink(join(fontDirPath, f)); } catch { /* ignore */ }
+          }
+          const { rmdir } = await import("fs/promises");
+          await rmdir(fontDirPath);
+        } catch {
+          // Font dir may not exist
+        }
         // Remove temp directory
         const { rmdir } = await import("fs/promises");
         await rmdir(tempDir);
@@ -234,7 +274,8 @@ function runFFmpeg(
   ffmpegBinary: string,
   inputPath: string,
   assPath: string,
-  outputPath: string
+  outputPath: string,
+  fontDir?: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     // The ass filter path needs to be escaped for FFmpeg filter syntax
@@ -243,13 +284,21 @@ function runFFmpeg(
       .replace(/\\/g, "/")
       .replace(/:/g, "\\:");
 
+    // Build the ass filter with optional fontsdir for serverless environments
+    const escapedFontDir = fontDir
+      ? fontDir.replace(/\\/g, "/").replace(/:/g, "\\:")
+      : null;
+    const assFilter = escapedFontDir
+      ? `ass='${escapedAssPath}':fontsdir='${escapedFontDir}'`
+      : `ass='${escapedAssPath}'`;
+
     const args = [
       "-i",
       inputPath,
       "-c:v",
       "libx264",
       "-vf",
-      `ass='${escapedAssPath}'`,
+      assFilter,
       "-c:a",
       "copy",
       // Strip all existing metadata (removes AI generation markers)
