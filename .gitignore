@@ -1,0 +1,40 @@
+# Environment and secrets
+.env
+credentials.json
+token.json
+
+# Intermediate files (always regenerated)
+.tmp/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Node.js
+node_modules/
+
+# Next.js
+web/.next/
+web/out/
+
+# Next.js environment
+web/.env.local
+web/.env.production.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
