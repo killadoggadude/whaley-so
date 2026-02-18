@@ -22,7 +22,6 @@ import {
   Play,
   Clapperboard,
   ArrowRight,
-  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -222,100 +221,71 @@ export function MotionControlWorkflow({
     }
   };
 
-  // ── Step 2b: Analyze frame with Gemini ─────────────────────────────
+  // ── Step 2b+3: Analyze frame + Generate image via Gemini API ────────
 
-  const handleAnalyzeFrame = async (frameUrlToAnalyze: string) => {
+  /**
+   * Combined analyze + generate flow via Google Gemini API.
+   * Step 1: Gemini 2.5 Flash analyzes the frame → scene description
+   * Step 2: Nano Banana Pro (Gemini 3 Pro Image) generates the image
+   *         with reference identity + scene description
+   * No polling needed — returns the image URL directly.
+   */
+  const handleAnalyzeAndRecreate = async (frameUrlToAnalyze: string) => {
+    if (!selectedModel || modelImages.length === 0) {
+      toast.error("Missing AI model or reference images");
+      return;
+    }
+
     setAnalyzing(true);
+    setStep("recreating");
     setAnalyzedPrompt(null);
+    setRecreatedImageUrl(null);
+    setError(null);
 
     try {
+      const referenceImageUrls = selectReferenceImages();
+
       const res = await fetch("/api/motion-control/analyze-frame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ frameUrl: frameUrlToAnalyze }),
+        body: JSON.stringify({
+          frameUrl: frameUrlToAnalyze,
+          referenceImageUrls,
+        }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        // Analysis failed — still allow manual recreation with generic prompt
-        console.warn("[AnalyzeFrame] Failed:", data.error);
-        toast.warning(
-          "Frame analysis failed. You can still recreate with the default prompt."
-        );
+        console.error("[AnalyzeAndRecreate] Failed:", data.error);
         setAnalyzing(false);
+        setStep("extracted");
+        setError(data.error || "Image recreation failed");
+        toast.error(data.error || "Image recreation failed");
         return;
       }
 
-      const geminiPrompt = data.prompt;
-      setAnalyzedPrompt(geminiPrompt);
-      setRecreatePrompt(geminiPrompt);
-      setAnalyzing(false);
-      toast.success("Frame analyzed! Auto-starting image recreation...");
+      // Store the scene description for retry/editing
+      if (data.sceneDescription) {
+        setAnalyzedPrompt(data.sceneDescription);
+        setRecreatePrompt(data.sceneDescription);
+      }
 
-      // Auto-trigger image recreation with the Gemini prompt
-      handleRecreateImageWithPrompt(geminiPrompt);
-    } catch {
-      console.warn("[AnalyzeFrame] Network error");
-      toast.warning(
-        "Frame analysis failed. You can still recreate with the default prompt."
-      );
       setAnalyzing(false);
+      setRecreatedImageUrl(data.imageUrl);
+      setStep("recreated");
+      toast.success("Image recreated with your AI model!");
+    } catch {
+      console.error("[AnalyzeAndRecreate] Network error");
+      setAnalyzing(false);
+      setStep("extracted");
+      setError("Network error during image recreation. Please try again.");
+      toast.error("Network error during image recreation");
     }
   };
 
-  // ── Step 3: Recreate image with AI model identity ─────────────────
-
-  const pollRecreateImage = useCallback(async (taskId: string) => {
-    pollingRef.current = true;
-    let attempts = 0;
-    let consecutiveErrors = 0;
-
-    while (pollingRef.current && attempts < MAX_POLL_ATTEMPTS) {
-      attempts++;
-      setPollCount(attempts);
-
-      try {
-        const res = await fetch(
-          `/api/motion-control/recreate-status?taskId=${encodeURIComponent(taskId)}`
-        );
-        const data = await res.json();
-
-        if (data.status === "completed" && data.imageUrl) {
-          pollingRef.current = false;
-          setRecreatedImageUrl(data.imageUrl);
-          setStep("recreated");
-          toast.success("Image recreated with your AI model!");
-          return;
-        }
-
-        if (data.status === "failed") {
-          pollingRef.current = false;
-          setStep("failed");
-          setError(data.error || "Image recreation failed");
-          return;
-        }
-
-        consecutiveErrors = 0;
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      } catch {
-        consecutiveErrors++;
-        if (consecutiveErrors >= 3) {
-          pollingRef.current = false;
-          setStep("failed");
-          setError("Network error after multiple retries");
-          return;
-        }
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      }
-    }
-
-    if (pollingRef.current) {
-      pollingRef.current = false;
-      setStep("failed");
-      setError(`Timed out after ${attempts} polls`);
-    }
-  }, []);
+  // Legacy alias for the auto-trigger from handleExtractFrame
+  const handleAnalyzeFrame = handleAnalyzeAndRecreate;
 
   /** Select 2 face + 1 body reference images from the model */
   const selectReferenceImages = () => {
@@ -357,56 +327,13 @@ export function MotionControlWorkflow({
     return selected.map((img) => img.signed_url);
   };
 
-  /**
-   * Core recreation function that accepts an explicit prompt.
-   * Used by both the auto-flow (Gemini prompt) and manual retry.
-   */
-  const handleRecreateImageWithPrompt = async (promptOverride?: string) => {
-    if (!frameUrl || !selectedModel || modelImages.length === 0) {
-      toast.error("Missing frame or model reference images");
+  /** Retry recreation — re-runs the Gemini analyze+generate pipeline */
+  const handleRecreateImage = async () => {
+    if (!frameUrl) {
+      toast.error("No frame available to recreate");
       return;
     }
-
-    setStep("recreating");
-    setError(null);
-    setPollCount(0);
-    setRecreatedImageUrl(null);
-    setResultVideoUrl(null);
-
-    try {
-      const referenceImageUrls = selectReferenceImages();
-      const promptToUse = promptOverride?.trim() || recreatePrompt.trim() || undefined;
-
-      const res = await fetch("/api/motion-control/recreate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          referenceImageUrls,
-          frameUrl,
-          prompt: promptToUse,
-          aspectRatio: "9:16",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setStep("failed");
-        setError(data.error || "Failed to submit image recreation");
-        return;
-      }
-
-      toast.info("Recreating image with AI model identity...");
-      pollRecreateImage(data.taskId);
-    } catch {
-      setStep("failed");
-      setError("Failed to submit image recreation");
-    }
-  };
-
-  /** Wrapper for button clicks (uses current recreatePrompt state) */
-  const handleRecreateImage = async () => {
-    handleRecreateImageWithPrompt();
+    handleAnalyzeAndRecreate(frameUrl);
   };
 
   // ── Step 4: Generate motion control video ─────────────────────────
@@ -944,59 +871,27 @@ export function MotionControlWorkflow({
                 Recreate Image with AI Model
               </h3>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Gemini AI analyzes the frame and generates a detailed scene
-                description. Nano Banana Pro Edit then recreates the image
-                using your AI model&apos;s identity.
+                Gemini AI analyzes the frame, then Nano Banana Pro generates
+                a new image with your AI model&apos;s identity in the same
+                scene. Fully automatic via Google&apos;s API.
               </p>
             </div>
           </div>
 
-          {/* Manual trigger — only shows if frame is extracted but auto-analysis didn't start recreation */}
+          {/* Manual trigger — only shows if auto-recreation failed */}
           {step === "extracted" && !analyzing && (
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>
-                  Scene Description Prompt{" "}
-                  <span className="text-muted-foreground font-normal">
-                    {analyzedPrompt ? "(auto-generated by Gemini)" : "(manual fallback)"}
-                  </span>
-                </Label>
-                <Textarea
-                  value={recreatePrompt}
-                  onChange={(e) => setRecreatePrompt(e.target.value)}
-                  placeholder={analyzedPrompt ? "Gemini-generated prompt loaded. Edit if needed." : "Gemini analysis didn't run. Leave empty for default prompt or type a custom scene description."}
-                  rows={4}
-                  className="resize-y text-sm"
-                />
-                {!analyzedPrompt && (
-                  <p className="text-xs text-muted-foreground">
-                    Gemini analysis didn&apos;t complete. You can retry analysis
-                    or proceed with the default prompt.
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                {!analyzedPrompt && frameUrl && (
-                  <Button
-                    variant="outline"
-                    onClick={() => handleAnalyzeFrame(frameUrl)}
-                    disabled={analyzing}
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry Gemini Analysis
-                  </Button>
-                )}
-                <Button
-                  onClick={handleRecreateImage}
-                  className="flex-1"
-                  size="lg"
-                >
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Recreate Image with {selectedModel?.name || "AI Model"} — Est.
-                  $0.14
-                </Button>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Auto-recreation didn&apos;t start. Click below to retry.
+              </p>
+              <Button
+                onClick={handleRecreateImage}
+                className="w-full"
+                size="lg"
+              >
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Recreate Image with {selectedModel?.name || "AI Model"}
+              </Button>
             </div>
           )}
 
@@ -1005,20 +900,14 @@ export function MotionControlWorkflow({
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-accent-blue" />
                 <span className="text-sm font-medium">
-                  Recreating image with AI model identity...
-                </span>
-                <span className="text-xs text-muted-foreground ml-auto">
-                  {Math.round(elapsedSeconds)}s elapsed
+                  {analyzing
+                    ? "Analyzing frame & generating image with Gemini AI..."
+                    : "Recreating image with AI model identity..."}
                 </span>
               </div>
-              <Progress value={progressPercent} className="h-2" />
               <p className="text-xs text-muted-foreground text-center">
-                {pollCount < 12 &&
-                  `Recreating with Nano Banana Pro Edit${analyzedPrompt ? " (Gemini-analyzed prompt)" : ""}. Usually takes 30-60 seconds...`}
-                {pollCount >= 12 &&
-                  pollCount < 30 &&
-                  "Still generating. This can take up to 2 minutes..."}
-                {pollCount >= 30 && "Almost there. Please wait..."}
+                Gemini analyzes the frame, then Nano Banana Pro generates the image.
+                This usually takes 15-45 seconds...
               </p>
             </div>
           )}
@@ -1081,7 +970,7 @@ export function MotionControlWorkflow({
                     className="w-full"
                   >
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry Image Recreation — Est. $0.14
+                    Retry Image Recreation (Gemini AI)
                   </Button>
                 </div>
               )}
@@ -1297,21 +1186,16 @@ export function MotionControlWorkflow({
       {/* ── Cost summary ─────────────────────────────────────────── */}
       <div className="rounded-lg border border-border bg-card/50 p-4">
         <h4 className="text-sm font-medium mb-2">Pipeline Cost Breakdown</h4>
-        <div className="grid grid-cols-4 gap-3 text-xs text-muted-foreground">
+        <div className="grid grid-cols-3 gap-4 text-xs text-muted-foreground">
           <div>
             <span className="font-medium text-foreground">Frame Extraction</span>
             <br />
             Free (FFmpeg)
           </div>
           <div>
-            <span className="font-medium text-foreground">Frame Analysis</span>
-            <br />
-            ~$0.001 (Gemini Flash)
-          </div>
-          <div>
             <span className="font-medium text-foreground">Image Recreation</span>
             <br />
-            ~$0.14 (Nano Banana Pro)
+            Free (Gemini API)
           </div>
           <div>
             <span className="font-medium text-foreground">Motion Control</span>
@@ -1320,7 +1204,7 @@ export function MotionControlWorkflow({
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Total estimated cost per video: ~$0.70-$3.50 depending on duration
+          Total estimated cost per video: ~$0.56-$3.36 depending on duration
         </p>
       </div>
     </div>
