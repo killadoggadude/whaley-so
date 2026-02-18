@@ -279,7 +279,8 @@ export function MotionControlWorkflow({
     setResultVideoUrl(null);
 
     try {
-      const referenceImageUrls = modelImages.map((img) => img.signed_url);
+      // Use max 3 reference images — the prompt is designed around "images 1, 2, 3"
+      const referenceImageUrls = modelImages.slice(0, 3).map((img) => img.signed_url);
 
       const res = await fetch("/api/motion-control/recreate-image", {
         method: "POST",

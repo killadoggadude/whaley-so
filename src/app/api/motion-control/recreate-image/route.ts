@@ -55,12 +55,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Cap at 3 reference images — prompt is designed for "images 1, 2, 3" + frame as "image 4"
+    const cappedRefs = referenceImageUrls.slice(0, 3);
+
     // Build the images array: reference images first, then the frame last
-    const images = [...referenceImageUrls, frameUrl];
+    const images = [...cappedRefs, frameUrl];
 
     // Build prompt that refers to images by index
     // Reference images are 1..N, frame is the last one (N+1)
-    const refCount = referenceImageUrls.length;
+    const refCount = cappedRefs.length;
     const frameIndex = refCount + 1;
     const refIndices =
       refCount === 1
