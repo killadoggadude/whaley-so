@@ -25,7 +25,9 @@ Thumbs.db
 node_modules/
 
 # Next.js
+.next/
 web/.next/
+out/
 web/out/
 
 # Next.js environment

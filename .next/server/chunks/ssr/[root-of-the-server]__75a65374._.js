@@ -1,3 +1,0 @@
-module.exports=[66178,a=>{a.v({className:"inter_5c2bf0c6-module__MZiVdq__className",variable:"inter_5c2bf0c6-module__MZiVdq__variable"})},27572,a=>{"use strict";var b=a.i(7997),c=a.i(66178);let d={className:c.default.className,style:{fontFamily:"'Inter', 'Inter Fallback'",fontStyle:"normal"}};function e({children:a}){return(0,b.jsx)("html",{lang:"en",suppressHydrationWarning:!0,children:(0,b.jsx)("body",{className:`${d.variable} antialiased`,children:a})})}null!=c.default.variable&&(d.variable=c.default.variable),a.s(["default",()=>e,"metadata",0,{title:"thirst.so",description:"AI-powered content creation and management tool"}],27572)}];
-
-//# sourceMappingURL=%5Broot-of-the-server%5D__75a65374._.js.map
