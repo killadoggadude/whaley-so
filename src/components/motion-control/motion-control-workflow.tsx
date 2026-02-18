@@ -279,8 +279,47 @@ export function MotionControlWorkflow({
     setResultVideoUrl(null);
 
     try {
-      // Use max 3 reference images — the prompt is designed around "images 1, 2, 3"
-      const referenceImageUrls = modelImages.slice(0, 3).map((img) => img.signed_url);
+      // Pick 2 face images + 1 body image from reference images
+      // Face images go first (identity source), body image last (body type reference)
+      const faceImages = modelImages.filter((img) =>
+        img.filename.toLowerCase().includes("face")
+      );
+      const bodyImages = modelImages.filter((img) =>
+        img.filename.toLowerCase().includes("body")
+      );
+      const otherImages = modelImages.filter(
+        (img) =>
+          !img.filename.toLowerCase().includes("face") &&
+          !img.filename.toLowerCase().includes("body")
+      );
+
+      const selected: typeof modelImages = [];
+      // Slot 1 & 2: face images
+      if (faceImages.length >= 2) {
+        selected.push(faceImages[0], faceImages[1]);
+      } else if (faceImages.length === 1) {
+        selected.push(faceImages[0]);
+        // Fill second slot from body or other
+        if (bodyImages.length > 0) selected.push(bodyImages[0]);
+        else if (otherImages.length > 0) selected.push(otherImages[0]);
+      } else {
+        // No face images — use whatever is available
+        selected.push(...modelImages.slice(0, 2));
+      }
+      // Slot 3: body image
+      if (selected.length < 3) {
+        const usedIds = new Set(selected.map((img) => img.id));
+        const unusedBody = bodyImages.find((img) => !usedIds.has(img.id));
+        if (unusedBody) {
+          selected.push(unusedBody);
+        } else {
+          // No unused body image — fill from any unused image
+          const fallback = modelImages.find((img) => !usedIds.has(img.id));
+          if (fallback) selected.push(fallback);
+        }
+      }
+
+      const referenceImageUrls = selected.map((img) => img.signed_url);
 
       const res = await fetch("/api/motion-control/recreate-image", {
         method: "POST",
