@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/assets/upload": {
+      "maxDuration": 60
+    },
+    "/api/dancing-reel/save": {
+      "maxDuration": 120
+    },
+    "/api/motion-control/download-video": {
+      "maxDuration": 60
+    },
+    "/api/motion-control/extract-frame": {
+      "maxDuration": 120
+    },
+    "/api/motion-control/recreate-image": {
+      "maxDuration": 120
+    },
+    "/api/motion-control/save": {
+      "maxDuration": 120
+    },
+    "/api/motion-control/submit": {
+      "maxDuration": 120
+    },
+    "/api/talking-head/add-captions": {
+      "maxDuration": 300
+    },
+    "/api/talking-head/save": {
+      "maxDuration": 120
+    },
+    "/api/talking-head/transcribe-audio": {
+      "maxDuration": 120
+    }
+  }
+}

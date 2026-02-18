@@ -1,0 +1,65 @@
+{
+  "node": {
+    "603a2216d6dae2430e450d9d9d8657b8fbef47f05d": {
+      "workers": {
+        "app/dashboard/tools/prompts/page": {
+          "moduleId": 77950,
+          "async": false,
+          "exportedName": "updatePromptAction",
+          "filename": "src/app/dashboard/tools/prompts/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/prompts/page": "rsc"
+      },
+      "exportedName": "updatePromptAction",
+      "filename": "src/app/dashboard/tools/prompts/actions.ts"
+    },
+    "40886c4094dc8e7fa94b50409e37b3bd3c23af2705": {
+      "workers": {
+        "app/dashboard/tools/prompts/page": {
+          "moduleId": 77950,
+          "async": false,
+          "exportedName": "deletePromptAction",
+          "filename": "src/app/dashboard/tools/prompts/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/prompts/page": "rsc"
+      },
+      "exportedName": "deletePromptAction",
+      "filename": "src/app/dashboard/tools/prompts/actions.ts"
+    },
+    "40cc7ce593799f345f22d67d5cee644da005a9b3ab": {
+      "workers": {
+        "app/dashboard/tools/prompts/page": {
+          "moduleId": 77950,
+          "async": false,
+          "exportedName": "savePromptsAction",
+          "filename": "src/app/dashboard/tools/prompts/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/prompts/page": "rsc"
+      },
+      "exportedName": "savePromptsAction",
+      "filename": "src/app/dashboard/tools/prompts/actions.ts"
+    },
+    "4080a7ba85e37fafbc4df09efa7c0c457b39cf3d12": {
+      "workers": {
+        "app/dashboard/tools/prompts/page": {
+          "moduleId": 77950,
+          "async": false,
+          "exportedName": "getPromptsAction",
+          "filename": "src/app/dashboard/tools/prompts/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/prompts/page": "rsc"
+      },
+      "exportedName": "getPromptsAction",
+      "filename": "src/app/dashboard/tools/prompts/actions.ts"
+    }
+  },
+  "edge": {}
+}

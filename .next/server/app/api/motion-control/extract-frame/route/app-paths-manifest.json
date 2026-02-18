@@ -1,0 +1,3 @@
+{
+  "/api/motion-control/extract-frame/route": "app/api/motion-control/extract-frame/route.js"
+}

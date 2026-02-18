@@ -33,6 +33,15 @@ interface MotionControlWorkflowProps {
   aiModels: AiModelWithImages[];
 }
 
+/** Check if a URL is a social media page URL (not a direct video file) */
+function isSocialUrl(url: string): boolean {
+  return (
+    url.includes("instagram.com") ||
+    url.includes("instagr.am") ||
+    url.includes("tiktok.com")
+  );
+}
+
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLL_ATTEMPTS = 200;
 
@@ -63,6 +72,8 @@ export function MotionControlWorkflow({
 
   // Step 2: Extracted frame
   const [frameUrl, setFrameUrl] = useState<string | null>(null);
+  // The resolved direct video URL (from Instagram/TikTok resolution or Supabase upload)
+  const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
 
   // Step 3: Recreated image
   const [recreatedImageUrl, setRecreatedImageUrl] = useState<string | null>(null);
@@ -84,10 +95,12 @@ export function MotionControlWorkflow({
   const selectedModel = aiModels.find((m) => m.id === selectedModelId) || null;
   const modelImages = selectedModel?.reference_images || [];
 
-  // The effective video URL — either from URL input or upload
-  const effectiveVideoUrl =
+  // The input video URL — either from URL input or upload
+  const inputVideoUrl =
     videoSource === "url" ? videoUrl.trim() : uploadedVideoUrl;
-  const hasVideoInput = !!effectiveVideoUrl;
+  const hasVideoInput = !!inputVideoUrl;
+  // For motion control step, use the resolved/stable video URL (direct .mp4)
+  const effectiveVideoUrl = resolvedVideoUrl || inputVideoUrl;
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -154,7 +167,7 @@ export function MotionControlWorkflow({
   // ── Step 2: Extract first frame ───────────────────────────────────
 
   const handleExtractFrame = async () => {
-    if (!effectiveVideoUrl) {
+    if (!inputVideoUrl) {
       toast.error("Please provide a video first");
       return;
     }
@@ -166,6 +179,7 @@ export function MotionControlWorkflow({
     setStep("extracting");
     setError(null);
     setFrameUrl(null);
+    setResolvedVideoUrl(null);
     setRecreatedImageUrl(null);
     setResultVideoUrl(null);
     setSavedAssetId(null);
@@ -174,7 +188,7 @@ export function MotionControlWorkflow({
       const res = await fetch("/api/motion-control/extract-frame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl: effectiveVideoUrl }),
+        body: JSON.stringify({ videoUrl: inputVideoUrl }),
       });
 
       const data = await res.json();
@@ -186,6 +200,11 @@ export function MotionControlWorkflow({
       }
 
       setFrameUrl(data.frameUrl);
+      // Store the resolved video URL (direct .mp4 from Supabase or CDN)
+      // This is needed because Instagram/TikTok page URLs don't work as direct video inputs
+      if (data.resolvedVideoUrl) {
+        setResolvedVideoUrl(data.resolvedVideoUrl);
+      }
       setStep("extracted");
       toast.success("First frame extracted!");
     } catch {
@@ -416,6 +435,7 @@ export function MotionControlWorkflow({
     setError(null);
     setPollCount(0);
     setFrameUrl(null);
+    setResolvedVideoUrl(null);
     setRecreatedImageUrl(null);
     setResultVideoUrl(null);
     setSavedAssetId(null);
@@ -620,15 +640,15 @@ export function MotionControlWorkflow({
           )}
         </div>
 
-        {/* Video preview */}
-        {effectiveVideoUrl && (
+        {/* Video preview — show resolved URL if available (direct .mp4), otherwise input URL */}
+        {(resolvedVideoUrl || (inputVideoUrl && !isSocialUrl(inputVideoUrl))) && (
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">
               Reference Video Preview
             </Label>
             <video
               controls
-              src={effectiveVideoUrl}
+              src={resolvedVideoUrl || inputVideoUrl || ""}
               className="w-full max-h-[250px] rounded-md bg-black"
               preload="metadata"
             />

@@ -1,0 +1,110 @@
+{
+  "node": {
+    "40945b4657fbbc84854f55e077ec83fce6396ebaf6": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "addViralReelAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "addViralReelAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    },
+    "609877132c564638c22b09d71f8ad02b8cdc0d045c": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "updateViralReelAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "updateViralReelAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    },
+    "40ee820b5d7fede4d20c0ae70ca799e972272788fe": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "getViralReelsAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "getViralReelsAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    },
+    "403eb245afb5826b6b80265661ba0eff0df1e0f6b2": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "toggleReelFavoriteAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "toggleReelFavoriteAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    },
+    "40e6bfcc2e50502a85d47d4fb21cef385976e4ab82": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "deleteViralReelAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "deleteViralReelAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    },
+    "404b7f00ef4752c44c0f4db313046725fd1d05c718": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "bulkDeleteReelsAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "bulkDeleteReelsAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    },
+    "00554dc6f872061ea18cf7d867f09baf126b22a4cb": {
+      "workers": {
+        "app/dashboard/viral-reels/page": {
+          "moduleId": 51288,
+          "async": false,
+          "exportedName": "getReelTagsAction",
+          "filename": "src/app/dashboard/viral-reels/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/viral-reels/page": "rsc"
+      },
+      "exportedName": "getReelTagsAction",
+      "filename": "src/app/dashboard/viral-reels/actions.ts"
+    }
+  },
+  "edge": {}
+}

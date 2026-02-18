@@ -1,0 +1,3 @@
+{
+  "/api/motion-control/download-video/route": "app/api/motion-control/download-video/route.js"
+}

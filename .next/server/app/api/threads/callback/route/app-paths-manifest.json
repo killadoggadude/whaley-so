@@ -1,0 +1,3 @@
+{
+  "/api/threads/callback/route": "app/api/threads/callback/route.js"
+}

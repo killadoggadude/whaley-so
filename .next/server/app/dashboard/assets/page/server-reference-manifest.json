@@ -1,0 +1,140 @@
+{
+  "node": {
+    "602e1c845f8630f5f412531edc4cf883cf93a23a97": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "updateTagsAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "updateTagsAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "40053fe9a2f7c6e98c710addb551de7b067aafee8f": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "getAssetsAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "getAssetsAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "400f9cd13317e2cd5ffcd01c986e487acfed902af0": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "toggleFavoriteAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "toggleFavoriteAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "401a61d277e1e8de37b642ff39d23bca1ab85e7ae1": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "deleteAssetAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "deleteAssetAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "40b258e326f20bb2dbc968a496bcf015cdae5e7353": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "bulkDeleteAssetsAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "bulkDeleteAssetsAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "607eee48e074499ac9911884e2acd0c8a36b9c8806": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "bulkAssignModelAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "bulkAssignModelAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "4066e82f12aa11473234b4a7222a4f5877a074ce8b": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "getSignedUrlsAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "getSignedUrlsAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "00dbb8c71377858bf5f6437fd9bbf73a69066a70b9": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "getModelsListAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "getModelsListAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    },
+    "00e62f429024c16383a5ef0f4854051bd69a26996f": {
+      "workers": {
+        "app/dashboard/assets/page": {
+          "moduleId": 46770,
+          "async": false,
+          "exportedName": "getUserTagsAction",
+          "filename": "src/app/dashboard/assets/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/assets/page": "rsc"
+      },
+      "exportedName": "getUserTagsAction",
+      "filename": "src/app/dashboard/assets/actions.ts"
+    }
+  },
+  "edge": {}
+}

@@ -1,0 +1,95 @@
+{
+  "node": {
+    "00daf52c11f2eafb32fbc5c1eb4185448d8497a782": {
+      "workers": {
+        "app/dashboard/tools/motion-control/page": {
+          "moduleId": 61719,
+          "async": false,
+          "exportedName": "getModelsAction",
+          "filename": "src/app/dashboard/models/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/motion-control/page": "rsc"
+      },
+      "exportedName": "getModelsAction",
+      "filename": "src/app/dashboard/models/actions.ts"
+    },
+    "4004454e18a9865c0fd1f4ee66dbff7625eac79992": {
+      "workers": {
+        "app/dashboard/tools/motion-control/page": {
+          "moduleId": 61719,
+          "async": false,
+          "exportedName": "deleteModelAction",
+          "filename": "src/app/dashboard/models/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/motion-control/page": "rsc"
+      },
+      "exportedName": "deleteModelAction",
+      "filename": "src/app/dashboard/models/actions.ts"
+    },
+    "405cfc2af01e2d19d080c1147fcdb2e003d8c4b87f": {
+      "workers": {
+        "app/dashboard/tools/motion-control/page": {
+          "moduleId": 61719,
+          "async": false,
+          "exportedName": "getModelAction",
+          "filename": "src/app/dashboard/models/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/motion-control/page": "rsc"
+      },
+      "exportedName": "getModelAction",
+      "filename": "src/app/dashboard/models/actions.ts"
+    },
+    "40a12f5381cb8fa9c0774270bbd644b7eeb489d194": {
+      "workers": {
+        "app/dashboard/tools/motion-control/page": {
+          "moduleId": 61719,
+          "async": false,
+          "exportedName": "createModelAction",
+          "filename": "src/app/dashboard/models/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/motion-control/page": "rsc"
+      },
+      "exportedName": "createModelAction",
+      "filename": "src/app/dashboard/models/actions.ts"
+    },
+    "40a63ee65ce74884b7964547b99c47cc0aab018fe1": {
+      "workers": {
+        "app/dashboard/tools/motion-control/page": {
+          "moduleId": 61719,
+          "async": false,
+          "exportedName": "toggleModelActiveAction",
+          "filename": "src/app/dashboard/models/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/motion-control/page": "rsc"
+      },
+      "exportedName": "toggleModelActiveAction",
+      "filename": "src/app/dashboard/models/actions.ts"
+    },
+    "605196c9e523bbfc5703794187d894c25dca1bcbd7": {
+      "workers": {
+        "app/dashboard/tools/motion-control/page": {
+          "moduleId": 61719,
+          "async": false,
+          "exportedName": "updateModelAction",
+          "filename": "src/app/dashboard/models/actions.ts"
+        }
+      },
+      "layer": {
+        "app/dashboard/tools/motion-control/page": "rsc"
+      },
+      "exportedName": "updateModelAction",
+      "filename": "src/app/dashboard/models/actions.ts"
+    }
+  },
+  "edge": {}
+}
