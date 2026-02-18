@@ -221,119 +221,103 @@ export function MotionControlWorkflow({
     }
   };
 
-  // ── Step 2b+3: Analyze frame + Generate image via Gemini API ────────
+  // ── Step 2b: Analyze frame with Gemini (prompt generation only) ─────
 
-  /**
-   * Combined analyze + generate flow via Google Gemini API.
-   * Step 1: Gemini 2.5 Flash analyzes the frame → scene description
-   * Step 2: Nano Banana Pro (Gemini 3 Pro Image) generates the image
-   *         with reference identity + scene description
-   * No polling needed — returns the image URL directly.
-   */
-  const handleAnalyzeAndRecreate = async (frameUrlToAnalyze: string) => {
-    if (!selectedModel || modelImages.length === 0) {
-      toast.error("Missing AI model or reference images");
-      return;
-    }
-
+  const handleAnalyzeFrame = async (frameUrlToAnalyze: string) => {
     setAnalyzing(true);
-    setStep("recreating");
     setAnalyzedPrompt(null);
-    setRecreatedImageUrl(null);
-    setError(null);
 
     try {
-      const referenceImageUrls = selectReferenceImages();
-
       const res = await fetch("/api/motion-control/analyze-frame", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          frameUrl: frameUrlToAnalyze,
-          referenceImageUrls,
-        }),
+        body: JSON.stringify({ frameUrl: frameUrlToAnalyze }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("[AnalyzeAndRecreate] Failed:", data.error);
+        console.warn("[AnalyzeFrame] Failed:", data.error);
+        toast.warning(
+          "Frame analysis failed. You can write the prompt manually."
+        );
         setAnalyzing(false);
-        setStep("extracted");
-        setError(data.error || "Image recreation failed");
-        toast.error(data.error || "Image recreation failed");
         return;
       }
 
-      // Store the scene description for retry/editing
-      if (data.sceneDescription) {
-        setAnalyzedPrompt(data.sceneDescription);
-        setRecreatePrompt(data.sceneDescription);
-      }
-
+      setAnalyzedPrompt(data.prompt);
+      setRecreatePrompt(data.prompt);
       setAnalyzing(false);
-      setRecreatedImageUrl(data.imageUrl);
-      setStep("recreated");
-      toast.success("Image recreated with your AI model!");
+      toast.success("Frame analyzed! Copy the prompt to use in Higgsfield.");
     } catch {
-      console.error("[AnalyzeAndRecreate] Network error");
+      console.warn("[AnalyzeFrame] Network error");
+      toast.warning(
+        "Frame analysis failed. You can write the prompt manually."
+      );
       setAnalyzing(false);
-      setStep("extracted");
-      setError("Network error during image recreation. Please try again.");
-      toast.error("Network error during image recreation");
     }
   };
 
-  // Legacy alias for the auto-trigger from handleExtractFrame
-  const handleAnalyzeFrame = handleAnalyzeAndRecreate;
+  // ── Step 3: Upload recreated image ────────────────────────────────
 
-  /** Select 2 face + 1 body reference images from the model */
-  const selectReferenceImages = () => {
-    const faceImages = modelImages.filter((img) =>
-      img.filename.toLowerCase().includes("face")
-    );
-    const bodyImages = modelImages.filter((img) =>
-      img.filename.toLowerCase().includes("body")
-    );
-    const otherImages = modelImages.filter(
-      (img) =>
-        !img.filename.toLowerCase().includes("face") &&
-        !img.filename.toLowerCase().includes("body")
-    );
+  const recreatedImageInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingRecreatedImage, setUploadingRecreatedImage] = useState(false);
 
-    const selected: typeof modelImages = [];
-    // Slot 1 & 2: face images
-    if (faceImages.length >= 2) {
-      selected.push(faceImages[0], faceImages[1]);
-    } else if (faceImages.length === 1) {
-      selected.push(faceImages[0]);
-      if (bodyImages.length > 0) selected.push(bodyImages[0]);
-      else if (otherImages.length > 0) selected.push(otherImages[0]);
-    } else {
-      selected.push(...modelImages.slice(0, 2));
-    }
-    // Slot 3: body image
-    if (selected.length < 3) {
-      const usedIds = new Set(selected.map((img) => img.id));
-      const unusedBody = bodyImages.find((img) => !usedIds.has(img.id));
-      if (unusedBody) {
-        selected.push(unusedBody);
-      } else {
-        const fallback = modelImages.find((img) => !usedIds.has(img.id));
-        if (fallback) selected.push(fallback);
-      }
-    }
+  const handleRecreatedImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    return selected.map((img) => img.signed_url);
-  };
-
-  /** Retry recreation — re-runs the Gemini analyze+generate pipeline */
-  const handleRecreateImage = async () => {
-    if (!frameUrl) {
-      toast.error("No frame available to recreate");
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
       return;
     }
-    handleAnalyzeAndRecreate(frameUrl);
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Image exceeds 20MB size limit");
+      return;
+    }
+
+    setUploadingRecreatedImage(true);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Not authenticated");
+        return;
+      }
+
+      const uuid = crypto.randomUUID();
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `${user.id}/motion-control/${uuid}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(filePath, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) {
+        toast.error(`Upload failed: ${uploadError.message}`);
+        return;
+      }
+
+      const { data: urlData } = await supabase.storage
+        .from("assets")
+        .createSignedUrl(filePath, 3600);
+
+      if (urlData?.signedUrl) {
+        setRecreatedImageUrl(urlData.signedUrl);
+        setStep("recreated");
+        toast.success("Recreated image uploaded!");
+      }
+    } catch {
+      toast.error("Failed to upload recreated image");
+    } finally {
+      setUploadingRecreatedImage(false);
+      if (recreatedImageInputRef.current)
+        recreatedImageInputRef.current.value = "";
+    }
   };
 
   // ── Step 4: Generate motion control video ─────────────────────────
@@ -850,7 +834,7 @@ export function MotionControlWorkflow({
         </div>
       )}
 
-      {/* ── Step 3: Recreate Image ───────────────────────────────── */}
+      {/* ── Step 3: Recreate Image (Manual via Higgsfield) ────────── */}
       {(currentStep >= 3 || step === "extracted") && (
         <div className="rounded-lg border border-border bg-card p-5 space-y-4">
           <div className="flex items-start gap-3">
@@ -871,107 +855,159 @@ export function MotionControlWorkflow({
                 Recreate Image with AI Model
               </h3>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Gemini AI analyzes the frame, then Nano Banana Pro generates
-                a new image with your AI model&apos;s identity in the same
-                scene. Fully automatic via Google&apos;s API.
+                Use the prompt and frame below to recreate the image in
+                Higgsfield with your AI model&apos;s reference images, then
+                upload the result here.
               </p>
             </div>
           </div>
 
-          {/* Manual trigger — only shows if auto-recreation failed */}
-          {step === "extracted" && !analyzing && (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Auto-recreation didn&apos;t start. Click below to retry.
-              </p>
-              <Button
-                onClick={handleRecreateImage}
-                className="w-full"
-                size="lg"
-              >
-                <ImageIcon className="h-4 w-4 mr-2" />
-                Recreate Image with {selectedModel?.name || "AI Model"}
-              </Button>
-            </div>
-          )}
-
-          {step === "recreating" && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-accent-blue" />
-                <span className="text-sm font-medium">
-                  {analyzing
-                    ? "Analyzing frame & generating image with Gemini AI..."
-                    : "Recreating image with AI model identity..."}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground text-center">
-                Gemini analyzes the frame, then Nano Banana Pro generates the image.
-                This usually takes 15-45 seconds...
-              </p>
-            </div>
-          )}
-
-          {recreatedImageUrl && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span className="text-sm font-medium">
-                  Image recreated successfully
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
+          {/* Show frame + prompt when extracted (waiting for user to recreate externally) */}
+          {(step === "extracted" || step === "recreated") && !analyzing && (
+            <div className="space-y-4">
+              {/* Frame download + preview */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <Label className="text-xs text-muted-foreground">
-                    Original Frame
+                    Extracted Frame
                   </Label>
-                  <img
-                    src={frameUrl!}
-                    alt="Original frame"
-                    className="w-full rounded-md border border-border"
-                  />
+                  {frameUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const a = document.createElement("a");
+                        a.href = frameUrl;
+                        a.download = "frame.jpg";
+                        a.target = "_blank";
+                        a.click();
+                      }}
+                    >
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Download Frame
+                    </Button>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Recreated with {selectedModel?.name}
-                  </Label>
+                {frameUrl && (
                   <img
-                    src={recreatedImageUrl}
-                    alt="Recreated frame"
-                    className="w-full rounded-md border border-border"
+                    src={frameUrl}
+                    alt="Extracted first frame"
+                    className="max-h-[250px] rounded-md border border-border"
                   />
-                </div>
+                )}
               </div>
 
-              {/* Retry recreation */}
-              {step === "recreated" && (
-                <div className="space-y-3 pt-2 border-t border-border">
-                  <p className="text-sm text-muted-foreground">
-                    Not happy with the result? Edit the scene description below and retry.
-                  </p>
-                  <div className="space-y-1.5">
-                    <Label>
-                      Scene Description{" "}
-                      <span className="text-muted-foreground font-normal">
-                        {analyzedPrompt ? "(Gemini-generated, editable)" : "(manual)"}
-                      </span>
-                    </Label>
-                    <Textarea
-                      value={recreatePrompt}
-                      onChange={(e) => setRecreatePrompt(e.target.value)}
-                      placeholder="Scene description for image recreation. Edit to adjust the output."
-                      rows={6}
-                      className="resize-y text-sm"
-                    />
-                  </div>
+              {/* Gemini-generated prompt */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    Scene Description{" "}
+                    <span className="text-muted-foreground font-normal">
+                      {analyzedPrompt
+                        ? "(auto-generated by Gemini AI)"
+                        : analyzing
+                          ? "(analyzing...)"
+                          : "(analysis pending)"}
+                    </span>
+                  </Label>
+                  {analyzedPrompt && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(recreatePrompt || analyzedPrompt);
+                        toast.success("Prompt copied to clipboard!");
+                      }}
+                    >
+                      Copy Prompt
+                    </Button>
+                  )}
+                </div>
+                <Textarea
+                  value={recreatePrompt}
+                  onChange={(e) => setRecreatePrompt(e.target.value)}
+                  placeholder={
+                    analyzing
+                      ? "Analyzing frame with Gemini AI..."
+                      : "Gemini will generate a scene description here. You can also write your own."
+                  }
+                  rows={8}
+                  className="resize-y text-sm font-mono"
+                  disabled={analyzing}
+                />
+                {!analyzedPrompt && !analyzing && frameUrl && (
                   <Button
                     variant="outline"
-                    onClick={handleRecreateImage}
-                    className="w-full"
+                    size="sm"
+                    onClick={() => handleAnalyzeFrame(frameUrl)}
                   >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry Image Recreation (Gemini AI)
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Analyze Frame with Gemini
                   </Button>
+                )}
+              </div>
+
+              {/* Upload recreated image */}
+              <div className="space-y-2 pt-3 border-t border-border">
+                <Label>Upload Recreated Image from Higgsfield</Label>
+                <input
+                  ref={recreatedImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleRecreatedImageUpload}
+                  className="hidden"
+                />
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => recreatedImageInputRef.current?.click()}
+                    disabled={uploadingRecreatedImage}
+                  >
+                    {uploadingRecreatedImage ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-1.5" />
+                    )}
+                    {uploadingRecreatedImage
+                      ? "Uploading..."
+                      : "Choose Recreated Image"}
+                  </Button>
+                  {recreatedImageUrl && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Check className="h-3 w-3" />
+                      Image uploaded
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Upload the image you generated in Higgsfield using the prompt
+                  above and your AI model&apos;s reference images.
+                </p>
+              </div>
+
+              {/* Side-by-side comparison */}
+              {recreatedImageUrl && frameUrl && (
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      Original Frame
+                    </Label>
+                    <img
+                      src={frameUrl}
+                      alt="Original frame"
+                      className="w-full rounded-md border border-border"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">
+                      Recreated with {selectedModel?.name}
+                    </Label>
+                    <img
+                      src={recreatedImageUrl}
+                      alt="Recreated frame"
+                      className="w-full rounded-md border border-border"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -1188,14 +1224,14 @@ export function MotionControlWorkflow({
         <h4 className="text-sm font-medium mb-2">Pipeline Cost Breakdown</h4>
         <div className="grid grid-cols-3 gap-4 text-xs text-muted-foreground">
           <div>
-            <span className="font-medium text-foreground">Frame Extraction</span>
+            <span className="font-medium text-foreground">Frame + Analysis</span>
             <br />
-            Free (FFmpeg)
+            Free (FFmpeg + Gemini)
           </div>
           <div>
             <span className="font-medium text-foreground">Image Recreation</span>
             <br />
-            Free (Gemini API)
+            Manual (Higgsfield)
           </div>
           <div>
             <span className="font-medium text-foreground">Motion Control</span>
