@@ -75,6 +75,10 @@ export function MotionControlWorkflow({
   // The resolved direct video URL (from Instagram/TikTok resolution or Supabase upload)
   const [resolvedVideoUrl, setResolvedVideoUrl] = useState<string | null>(null);
 
+  // Step 2b: Gemini frame analysis
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzedPrompt, setAnalyzedPrompt] = useState<string | null>(null);
+
   // Step 3: Recreated image
   const [recreatedImageUrl, setRecreatedImageUrl] = useState<string | null>(null);
   const [recreatePrompt, setRecreatePrompt] = useState("");
@@ -180,6 +184,8 @@ export function MotionControlWorkflow({
     setError(null);
     setFrameUrl(null);
     setResolvedVideoUrl(null);
+    setAnalyzedPrompt(null);
+    setRecreatePrompt("");
     setRecreatedImageUrl(null);
     setResultVideoUrl(null);
     setSavedAssetId(null);
@@ -207,9 +213,54 @@ export function MotionControlWorkflow({
       }
       setStep("extracted");
       toast.success("First frame extracted!");
+
+      // Auto-trigger Gemini frame analysis
+      handleAnalyzeFrame(data.frameUrl);
     } catch {
       setStep("failed");
       setError("Failed to extract frame from video");
+    }
+  };
+
+  // ── Step 2b: Analyze frame with Gemini ─────────────────────────────
+
+  const handleAnalyzeFrame = async (frameUrlToAnalyze: string) => {
+    setAnalyzing(true);
+    setAnalyzedPrompt(null);
+
+    try {
+      const res = await fetch("/api/motion-control/analyze-frame", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ frameUrl: frameUrlToAnalyze }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Analysis failed — still allow manual recreation with generic prompt
+        console.warn("[AnalyzeFrame] Failed:", data.error);
+        toast.warning(
+          "Frame analysis failed. You can still recreate with the default prompt."
+        );
+        setAnalyzing(false);
+        return;
+      }
+
+      const geminiPrompt = data.prompt;
+      setAnalyzedPrompt(geminiPrompt);
+      setRecreatePrompt(geminiPrompt);
+      setAnalyzing(false);
+      toast.success("Frame analyzed! Auto-starting image recreation...");
+
+      // Auto-trigger image recreation with the Gemini prompt
+      handleRecreateImageWithPrompt(geminiPrompt);
+    } catch {
+      console.warn("[AnalyzeFrame] Network error");
+      toast.warning(
+        "Frame analysis failed. You can still recreate with the default prompt."
+      );
+      setAnalyzing(false);
     }
   };
 
@@ -266,7 +317,51 @@ export function MotionControlWorkflow({
     }
   }, []);
 
-  const handleRecreateImage = async () => {
+  /** Select 2 face + 1 body reference images from the model */
+  const selectReferenceImages = () => {
+    const faceImages = modelImages.filter((img) =>
+      img.filename.toLowerCase().includes("face")
+    );
+    const bodyImages = modelImages.filter((img) =>
+      img.filename.toLowerCase().includes("body")
+    );
+    const otherImages = modelImages.filter(
+      (img) =>
+        !img.filename.toLowerCase().includes("face") &&
+        !img.filename.toLowerCase().includes("body")
+    );
+
+    const selected: typeof modelImages = [];
+    // Slot 1 & 2: face images
+    if (faceImages.length >= 2) {
+      selected.push(faceImages[0], faceImages[1]);
+    } else if (faceImages.length === 1) {
+      selected.push(faceImages[0]);
+      if (bodyImages.length > 0) selected.push(bodyImages[0]);
+      else if (otherImages.length > 0) selected.push(otherImages[0]);
+    } else {
+      selected.push(...modelImages.slice(0, 2));
+    }
+    // Slot 3: body image
+    if (selected.length < 3) {
+      const usedIds = new Set(selected.map((img) => img.id));
+      const unusedBody = bodyImages.find((img) => !usedIds.has(img.id));
+      if (unusedBody) {
+        selected.push(unusedBody);
+      } else {
+        const fallback = modelImages.find((img) => !usedIds.has(img.id));
+        if (fallback) selected.push(fallback);
+      }
+    }
+
+    return selected.map((img) => img.signed_url);
+  };
+
+  /**
+   * Core recreation function that accepts an explicit prompt.
+   * Used by both the auto-flow (Gemini prompt) and manual retry.
+   */
+  const handleRecreateImageWithPrompt = async (promptOverride?: string) => {
     if (!frameUrl || !selectedModel || modelImages.length === 0) {
       toast.error("Missing frame or model reference images");
       return;
@@ -279,47 +374,8 @@ export function MotionControlWorkflow({
     setResultVideoUrl(null);
 
     try {
-      // Pick 2 face images + 1 body image from reference images
-      // Face images go first (identity source), body image last (body type reference)
-      const faceImages = modelImages.filter((img) =>
-        img.filename.toLowerCase().includes("face")
-      );
-      const bodyImages = modelImages.filter((img) =>
-        img.filename.toLowerCase().includes("body")
-      );
-      const otherImages = modelImages.filter(
-        (img) =>
-          !img.filename.toLowerCase().includes("face") &&
-          !img.filename.toLowerCase().includes("body")
-      );
-
-      const selected: typeof modelImages = [];
-      // Slot 1 & 2: face images
-      if (faceImages.length >= 2) {
-        selected.push(faceImages[0], faceImages[1]);
-      } else if (faceImages.length === 1) {
-        selected.push(faceImages[0]);
-        // Fill second slot from body or other
-        if (bodyImages.length > 0) selected.push(bodyImages[0]);
-        else if (otherImages.length > 0) selected.push(otherImages[0]);
-      } else {
-        // No face images — use whatever is available
-        selected.push(...modelImages.slice(0, 2));
-      }
-      // Slot 3: body image
-      if (selected.length < 3) {
-        const usedIds = new Set(selected.map((img) => img.id));
-        const unusedBody = bodyImages.find((img) => !usedIds.has(img.id));
-        if (unusedBody) {
-          selected.push(unusedBody);
-        } else {
-          // No unused body image — fill from any unused image
-          const fallback = modelImages.find((img) => !usedIds.has(img.id));
-          if (fallback) selected.push(fallback);
-        }
-      }
-
-      const referenceImageUrls = selected.map((img) => img.signed_url);
+      const referenceImageUrls = selectReferenceImages();
+      const promptToUse = promptOverride?.trim() || recreatePrompt.trim() || undefined;
 
       const res = await fetch("/api/motion-control/recreate-image", {
         method: "POST",
@@ -327,7 +383,7 @@ export function MotionControlWorkflow({
         body: JSON.stringify({
           referenceImageUrls,
           frameUrl,
-          prompt: recreatePrompt.trim() || undefined,
+          prompt: promptToUse,
           aspectRatio: "9:16",
         }),
       });
@@ -346,6 +402,11 @@ export function MotionControlWorkflow({
       setStep("failed");
       setError("Failed to submit image recreation");
     }
+  };
+
+  /** Wrapper for button clicks (uses current recreatePrompt state) */
+  const handleRecreateImage = async () => {
+    handleRecreateImageWithPrompt();
   };
 
   // ── Step 4: Generate motion control video ─────────────────────────
@@ -476,6 +537,8 @@ export function MotionControlWorkflow({
     setPollCount(0);
     setFrameUrl(null);
     setResolvedVideoUrl(null);
+    setAnalyzing(false);
+    setAnalyzedPrompt(null);
     setRecreatedImageUrl(null);
     setResultVideoUrl(null);
     setSavedAssetId(null);
@@ -503,6 +566,7 @@ export function MotionControlWorkflow({
 
   const isProcessing =
     step === "extracting" ||
+    analyzing ||
     step === "recreating" ||
     step === "generating";
 
@@ -835,6 +899,27 @@ export function MotionControlWorkflow({
               />
             </div>
           )}
+
+          {/* Gemini analysis sub-step */}
+          {analyzing && (
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <Loader2 className="h-4 w-4 animate-spin text-accent-blue" />
+              <span className="text-sm font-medium">
+                Analyzing frame with Gemini AI...
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto">
+                ~3-5 seconds
+              </span>
+            </div>
+          )}
+          {analyzedPrompt && !analyzing && (
+            <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium">
+                Frame analyzed — scene description generated
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -859,45 +944,59 @@ export function MotionControlWorkflow({
                 Recreate Image with AI Model
               </h3>
               <p className="text-sm text-muted-foreground mt-0.5">
-                The extracted frame is recreated using your AI model&apos;s
-                identity via Nano Banana Pro Edit. Same pose, outfit, and
-                background — different person.
+                Gemini AI analyzes the frame and generates a detailed scene
+                description. Nano Banana Pro Edit then recreates the image
+                using your AI model&apos;s identity.
               </p>
             </div>
           </div>
 
-          {/* Custom prompt override (optional) */}
-          {step === "extracted" && (
+          {/* Manual trigger — only shows if frame is extracted but auto-analysis didn't start recreation */}
+          {step === "extracted" && !analyzing && (
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>
-                  Recreation Prompt{" "}
+                  Scene Description Prompt{" "}
                   <span className="text-muted-foreground font-normal">
-                    (optional override)
+                    {analyzedPrompt ? "(auto-generated by Gemini)" : "(manual fallback)"}
                   </span>
                 </Label>
                 <Textarea
                   value={recreatePrompt}
                   onChange={(e) => setRecreatePrompt(e.target.value)}
-                  placeholder="Leave empty to use the default identity-swap prompt. Override if you need specific adjustments."
-                  rows={3}
+                  placeholder={analyzedPrompt ? "Gemini-generated prompt loaded. Edit if needed." : "Gemini analysis didn't run. Leave empty for default prompt or type a custom scene description."}
+                  rows={4}
                   className="resize-y text-sm"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Default prompt swaps the person&apos;s identity while keeping
-                  pose, outfit, background, and expression.
-                </p>
+                {!analyzedPrompt && (
+                  <p className="text-xs text-muted-foreground">
+                    Gemini analysis didn&apos;t complete. You can retry analysis
+                    or proceed with the default prompt.
+                  </p>
+                )}
               </div>
 
-              <Button
-                onClick={handleRecreateImage}
-                className="w-full"
-                size="lg"
-              >
-                <ImageIcon className="h-4 w-4 mr-2" />
-                Recreate Image with {selectedModel?.name || "AI Model"} — Est.
-                $0.14
-              </Button>
+              <div className="flex gap-2">
+                {!analyzedPrompt && frameUrl && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleAnalyzeFrame(frameUrl)}
+                    disabled={analyzing}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry Gemini Analysis
+                  </Button>
+                )}
+                <Button
+                  onClick={handleRecreateImage}
+                  className="flex-1"
+                  size="lg"
+                >
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Recreate Image with {selectedModel?.name || "AI Model"} — Est.
+                  $0.14
+                </Button>
+              </div>
             </div>
           )}
 
@@ -915,7 +1014,7 @@ export function MotionControlWorkflow({
               <Progress value={progressPercent} className="h-2" />
               <p className="text-xs text-muted-foreground text-center">
                 {pollCount < 12 &&
-                  "Processing with Nano Banana Pro Edit. Usually takes 30-60 seconds..."}
+                  `Recreating with Nano Banana Pro Edit${analyzedPrompt ? " (Gemini-analyzed prompt)" : ""}. Usually takes 30-60 seconds...`}
                 {pollCount >= 12 &&
                   pollCount < 30 &&
                   "Still generating. This can take up to 2 minutes..."}
@@ -959,20 +1058,20 @@ export function MotionControlWorkflow({
               {step === "recreated" && (
                 <div className="space-y-3 pt-2 border-t border-border">
                   <p className="text-sm text-muted-foreground">
-                    Not happy with the result? Adjust the prompt and try again.
+                    Not happy with the result? Edit the scene description below and retry.
                   </p>
                   <div className="space-y-1.5">
                     <Label>
-                      Recreation Prompt{" "}
+                      Scene Description{" "}
                       <span className="text-muted-foreground font-normal">
-                        (optional override)
+                        {analyzedPrompt ? "(Gemini-generated, editable)" : "(manual)"}
                       </span>
                     </Label>
                     <Textarea
                       value={recreatePrompt}
                       onChange={(e) => setRecreatePrompt(e.target.value)}
-                      placeholder="Leave empty to use the default identity-swap prompt. Override if you need specific adjustments."
-                      rows={3}
+                      placeholder="Scene description for image recreation. Edit to adjust the output."
+                      rows={6}
                       className="resize-y text-sm"
                     />
                   </div>
@@ -1198,11 +1297,16 @@ export function MotionControlWorkflow({
       {/* ── Cost summary ─────────────────────────────────────────── */}
       <div className="rounded-lg border border-border bg-card/50 p-4">
         <h4 className="text-sm font-medium mb-2">Pipeline Cost Breakdown</h4>
-        <div className="grid grid-cols-3 gap-4 text-xs text-muted-foreground">
+        <div className="grid grid-cols-4 gap-3 text-xs text-muted-foreground">
           <div>
             <span className="font-medium text-foreground">Frame Extraction</span>
             <br />
             Free (FFmpeg)
+          </div>
+          <div>
+            <span className="font-medium text-foreground">Frame Analysis</span>
+            <br />
+            ~$0.001 (Gemini Flash)
           </div>
           <div>
             <span className="font-medium text-foreground">Image Recreation</span>

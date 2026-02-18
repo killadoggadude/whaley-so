@@ -12,7 +12,10 @@ export const maxDuration = 120;
  * - First 1-3 images: AI model reference images (identity/face/body)
  * - Last image: The extracted frame to recreate
  *
- * The prompt instructs the model to swap identity while keeping pose/background/outfit.
+ * The prompt should ideally be a Gemini-generated detailed scene description
+ * (from the /analyze-frame endpoint). A generic fallback prompt is used if
+ * no prompt is provided, but results will be significantly better with the
+ * Gemini-analyzed prompt.
  */
 export async function POST(request: Request) {
   try {
@@ -72,13 +75,21 @@ export async function POST(request: Request) {
           ? "images 1 and 2"
           : `images ${Array.from({ length: refCount }, (_, i) => i + 1).join(", ")}`;
 
-    const defaultPrompt = `Recreate image ${frameIndex} using the identity, facial features, and body type from ${refIndices}. Keep the same posing, same outfit, same background, same lighting and same camera angle as image ${frameIndex}. Keep the subject's posing and facial expression from image ${frameIndex} but use the person from ${refIndices}. Do not change the background or environment. no jewerly no tattoo same posing and face expression as in image ${frameIndex}`;
+    // If a Gemini-analyzed prompt is provided, wrap it with identity swap instructions.
+    // Otherwise fall back to the generic prompt.
+    const hasGeminiPrompt = !!prompt?.trim();
+    let finalPrompt: string;
 
-    const finalPrompt = prompt?.trim() || defaultPrompt;
+    if (hasGeminiPrompt) {
+      // Wrap the Gemini scene description with identity swap instructions
+      finalPrompt = `Using the identity, facial features, hair, and body type from ${refIndices}, recreate the scene described below as shown in image ${frameIndex}. The person in the output must look like the person in ${refIndices}. Keep the exact same posing, outfit, background, lighting, and camera angle as image ${frameIndex}. No jewelry, no tattoos.\n\n${prompt!.trim()}`;
+    } else {
+      finalPrompt = `Recreate image ${frameIndex} using the identity, facial features, and body type from ${refIndices}. Keep the same posing, same outfit, same background, same lighting and same camera angle as image ${frameIndex}. Keep the subject's posing and facial expression from image ${frameIndex} but use the person from ${refIndices}. Do not change the background or environment. no jewelry no tattoo same posing and face expression as in image ${frameIndex}`;
+    }
 
     console.log(
-      "[RecreateImage] Submitting to Nano Banana Pro Edit:",
-      `${images.length} images, prompt: ${finalPrompt.slice(0, 100)}...`
+      `[RecreateImage] Submitting to Nano Banana Pro Edit (${hasGeminiPrompt ? "Gemini prompt" : "fallback prompt"}):`,
+      `${images.length} images, prompt: ${finalPrompt.slice(0, 150)}...`
     );
 
     // Call WaveSpeed Nano Banana Pro Edit API
