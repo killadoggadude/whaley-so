@@ -914,6 +914,38 @@ export function MotionControlWorkflow({
                   />
                 </div>
               </div>
+
+              {/* Retry recreation */}
+              {step === "recreated" && (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Not happy with the result? Adjust the prompt and try again.
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label>
+                      Recreation Prompt{" "}
+                      <span className="text-muted-foreground font-normal">
+                        (optional override)
+                      </span>
+                    </Label>
+                    <Textarea
+                      value={recreatePrompt}
+                      onChange={(e) => setRecreatePrompt(e.target.value)}
+                      placeholder="Leave empty to use the default identity-swap prompt. Override if you need specific adjustments."
+                      rows={3}
+                      className="resize-y text-sm"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleRecreateImage}
+                    className="w-full"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry Image Recreation — Est. $0.14
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
