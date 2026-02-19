@@ -6,7 +6,7 @@ import { getModelsAction } from "@/app/dashboard/models/actions";
 export const metadata = {
   title: "Motion Control | AI OFM",
   description:
-    "Create motion-controlled videos by transferring movements from reference videos to your AI model",
+    "Create motion-controlled videos by transferring movements from reference videos to your model",
 };
 
 export default async function MotionControlPage() {
@@ -26,7 +26,7 @@ export default async function MotionControlPage() {
         <h1 className="text-2xl font-bold tracking-tight">Motion Control</h1>
         <p className="text-muted-foreground">
           Transfer movements from a reference video (Instagram reel, TikTok,
-          etc.) to your AI model. The system extracts the first frame, recreates
+          etc.) to your model. The system extracts the first frame, recreates
           it with your model&apos;s identity, then generates a new video with
           the same motions.
         </p>

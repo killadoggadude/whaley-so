@@ -60,7 +60,7 @@ export function StepScriptEdit({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        This text will be spoken by your AI model&apos;s voice in the next step.
+        This text will be spoken by your model&apos;s voice in the next step.
         Use the Next button to continue.
       </p>
     </div>

@@ -33,7 +33,7 @@ export async function getAssetsAction(
     if (filters?.search) {
       query = query.ilike("filename", `%${filters.search}%`);
     }
-    // AI Model filter: null = unassigned, string = specific model
+    // Model filter: null = unassigned, string = specific model
     if (filters?.ai_model_id !== undefined) {
       if (filters.ai_model_id === null) {
         query = query.is("ai_model_id", null);

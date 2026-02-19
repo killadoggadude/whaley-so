@@ -45,7 +45,7 @@ export function StepVoiceGen({
 
   const handleGenerate = async () => {
     if (!selectedModel) {
-      toast.error("Select an AI model first");
+      toast.error("Select a model first");
       return;
     }
 
@@ -125,10 +125,10 @@ export function StepVoiceGen({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            No AI models with voice configured. Add voice settings (ElevenLabs
+            No models with voice configured. Add voice settings (ElevenLabs
             voice ID) to your models in the{" "}
             <a href="/dashboard/models" className="underline font-medium">
-              AI Models
+              Models
             </a>{" "}
             page.
           </AlertDescription>
@@ -136,7 +136,7 @@ export function StepVoiceGen({
       ) : (
         <>
           <div className="space-y-2">
-            <Label>AI Model</Label>
+            <Label>Model</Label>
             <Select
               value={selectedModel?.id || ""}
               onValueChange={(v) => {
@@ -145,7 +145,7 @@ export function StepVoiceGen({
               }}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select an AI model..." />
+                <SelectValue placeholder="Select a model..." />
               </SelectTrigger>
               <SelectContent>
                 {voiceModels.map((model) => (

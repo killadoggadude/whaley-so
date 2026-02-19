@@ -32,7 +32,7 @@ interface AssetFiltersProps {
   onSortChange: (value: string) => void;
   viewMode: "grid" | "list";
   onViewModeChange: (mode: "grid" | "list") => void;
-  // AI Model filter
+  // Model filter
   aiModels: { id: string; name: string }[];
   selectedModelId: string | undefined;
   onModelChange: (modelId: string | undefined) => void;
@@ -96,7 +96,7 @@ export function AssetFilters({
         ))}
       </div>
 
-      {/* AI Model filter */}
+      {/* Model filter */}
       {aiModels.length > 0 && (
         <Select
           value={selectedModelId || "all"}

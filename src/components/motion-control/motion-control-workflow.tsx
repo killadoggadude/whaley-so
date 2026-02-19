@@ -64,7 +64,7 @@ export function MotionControlWorkflow({
   const [videoUploading, setVideoUploading] = useState(false);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 1: AI Model selection
+  // Step 1: Model selection
   const [selectedModelId, setSelectedModelId] = useState<string>(
     aiModels.length === 1 ? aiModels[0].id : ""
   );
@@ -175,7 +175,7 @@ export function MotionControlWorkflow({
       return;
     }
     if (!selectedModelId) {
-      toast.error("Please select an AI model");
+      toast.error("Please select a model");
       return;
     }
 
@@ -572,10 +572,10 @@ export function MotionControlWorkflow({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-semibold">
-              Reference Video & AI Model
+              Reference Video & Model
             </h3>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Provide a reference video (the motions to copy) and select the AI
+              Provide a reference video (the motions to copy) and select the
               model whose identity will be used.
             </p>
           </div>
@@ -670,19 +670,19 @@ export function MotionControlWorkflow({
           </div>
         )}
 
-        {/* AI Model selection */}
+        {/* Model selection */}
         <div className="space-y-1.5">
-          <Label>AI Model</Label>
+          <Label>Model</Label>
           {aiModels.length === 0 ? (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                No active AI models found. Create one in the{" "}
+                No active models found. Create one in the{" "}
                 <a
                   href="/dashboard/models"
                   className="underline font-medium"
                 >
-                  AI Models
+                  Models
                 </a>{" "}
                 section first.
               </AlertDescription>
@@ -694,7 +694,7 @@ export function MotionControlWorkflow({
               className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
               disabled={isProcessing}
             >
-              <option value="">Select an AI model...</option>
+              <option value="">Select a model...</option>
               {aiModels.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name} ({m.reference_images.length} reference images)
@@ -734,7 +734,7 @@ export function MotionControlWorkflow({
                 href="/dashboard/models"
                 className="underline font-medium"
               >
-                AI Models
+                Models
               </a>{" "}
               section.
             </AlertDescription>
@@ -852,11 +852,11 @@ export function MotionControlWorkflow({
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-base font-semibold">
-                Recreate Image with AI Model
+                Recreate Image with Model
               </h3>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Use the prompt and frame below to recreate the image in
-                Higgsfield with your AI model&apos;s reference images, then
+                Higgsfield with your model&apos;s reference images, then
                 upload the result here.
               </p>
             </div>

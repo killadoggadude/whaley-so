@@ -666,7 +666,7 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
   const handleRunAll = async () => {
     if (!selectedModel) {
-      toast.error("Select an AI model first");
+      toast.error("Select a model first");
       return;
     }
 
@@ -749,23 +749,23 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
     <div className="space-y-6">
       <StepSection
         step={1}
-        title="Select AI Model & Resolution"
-        description="Choose which AI model voice to use for narration and the output video resolution. Models need voice settings configured in the AI Models page."
+        title="Select Model & Resolution"
+        description="Choose which model voice to use for narration and the output video resolution. Models need voice settings configured in the Models page."
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>AI Model (Voice)</Label>
+            <Label>Model (Voice)</Label>
             {voiceModels.length === 0 ? (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  No AI models with voice configured. <a href="/dashboard/models" className="underline font-medium">Add voice settings</a>
+                  No models with voice configured. <a href="/dashboard/models" className="underline font-medium">Add voice settings</a>
                 </AlertDescription>
               </Alert>
             ) : (
               <Select value={selectedModelId} onValueChange={setSelectedModelId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select AI model..." />
+                  <SelectValue placeholder="Select model..." />
                 </SelectTrigger>
                 <SelectContent>
                   {voiceModels.map((m) => (

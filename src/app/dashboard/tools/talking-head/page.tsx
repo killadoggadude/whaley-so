@@ -5,7 +5,7 @@ import { getModelsAction } from "@/app/dashboard/models/actions";
 
 export const metadata = {
   title: "Talking Head | AI OFM",
-  description: "Create lip-synced talking head videos from your AI models",
+  description: "Create lip-synced talking head videos from your models",
 };
 
 export default async function TalkingHeadPage({

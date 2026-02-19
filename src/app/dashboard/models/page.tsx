@@ -4,7 +4,7 @@ import { ModelList } from "@/components/models/model-list";
 import { getModelsAction } from "./actions";
 
 export const metadata = {
-  title: "AI Models | AI OFM",
+  title: "Models | AI OFM",
   description: "Create and manage your AI model profiles",
 };
 
@@ -21,7 +21,7 @@ export default async function ModelsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">AI Models</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Models</h1>
         <p className="text-muted-foreground">
           Create and manage your AI model profiles.
         </p>

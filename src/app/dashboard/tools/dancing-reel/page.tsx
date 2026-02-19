@@ -5,7 +5,7 @@ import { getModelsAction } from "@/app/dashboard/models/actions";
 
 export const metadata = {
   title: "Dancing Reel | AI OFM",
-  description: "Create dancing reel videos from your AI model images using Kling 2.6 Pro",
+  description: "Create dancing reel videos from your model images using Kling 2.6 Pro",
 };
 
 export default async function DancingReelPage() {

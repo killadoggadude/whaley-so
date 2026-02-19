@@ -27,7 +27,7 @@ const navItems = [
     icon: FolderOpen,
   },
   {
-    title: "AI Models",
+    title: "Models",
     href: "/dashboard/models",
     icon: UserCircle,
   },
