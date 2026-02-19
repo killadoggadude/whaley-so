@@ -432,7 +432,7 @@ export function ScriptsClient({
 
       {/* New Script Dialog */}
       <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Script</DialogTitle>
             <DialogDescription>
@@ -534,7 +534,7 @@ export function ScriptsClient({
 
       {/* Generate AI Dialog */}
       <Dialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Generate Scripts with AI</DialogTitle>
             <DialogDescription>
