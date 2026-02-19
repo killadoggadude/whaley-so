@@ -31,7 +31,6 @@ import {
   X,
   Subtitles,
   RefreshCw,
-  Info,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CaptionCustomizerInline } from "./caption-customizer";
@@ -43,10 +42,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WordTimestamp } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { createClient } from "@/lib/supabase/client";
 import { getAssetsAction } from "@/app/dashboard/assets/actions";
 import type { AiModelWithImages, AssetWithUrl } from "@/types";
 
@@ -68,42 +65,10 @@ interface BulkJob {
   captionedVideoUrl?: string;
   videoAssetId?: string;
   pollCount?: number;
-  words?: WordTimestamp[];
 }
 
-const POLL_INTERVAL_MS = 5000;
-const MAX_POLL_ATTEMPTS = 200;
-
-// Step section component for visual stepping through the workflow
-function StepSection({
-  step,
-  title,
-  description,
-  children,
-}: {
-  step: number;
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-5 space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-semibold">
-          {step}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold">{title}</h3>
-            <Info className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
+const POLL_INTERVAL_MS = 3000;
+const MAX_POLL_ATTEMPTS = 100;
 
 export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const voiceModels = aiModels.filter((m) => m.voice_id && m.voice_id.trim());
@@ -127,20 +92,6 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkDragOver, setBulkDragOver] = useState(false);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
-
-  // Asset picker dialog for bulk pool
-  const [showAssetPicker, setShowAssetPicker] = useState(false);
-  const [assetPickerImages, setAssetPickerImages] = useState<AssetWithUrl[]>([]);
-  const [assetPickerLoading, setAssetPickerLoading] = useState(false);
-  const [assetPickerTotal, setAssetPickerTotal] = useState(0);
-  const [assetPickerSearch, setAssetPickerSearch] = useState("");
-  const assetPickerFileInputRef = useRef<HTMLInputElement>(null);
-  const [assetPickerUploading, setAssetPickerUploading] = useState(false);
-
-  // Re-caption dialog state
-  const [recaptionJobId, setRecaptionJobId] = useState<string | null>(null);
-  const [recaptionSettings, setRecaptionSettings] = useState<CustomCaptionSettings>({ ...DEFAULT_CAPTION_SETTINGS });
-  const [recaptioning, setRecaptioning] = useState(false);
 
   const selectedModel = voiceModels.find((m) => m.id === selectedModelId) || null;
 
@@ -204,87 +155,6 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
     }
   };
 
-  // Fetch images for asset picker dialog
-  const fetchAssetPickerImages = useCallback(async (append: boolean = false) => {
-    setAssetPickerLoading(true);
-    const offset = append ? assetPickerImages.length : 0;
-    const result = await getAssetsAction({
-      file_type: "image",
-      search: assetPickerSearch || undefined,
-      sort_by: "created_at",
-      sort_order: "desc",
-      limit: 30,
-      offset,
-    });
-    if (append) {
-      setAssetPickerImages((prev) => [...prev, ...result.assets]);
-    } else {
-      setAssetPickerImages(result.assets);
-    }
-    setAssetPickerTotal(result.total);
-    setAssetPickerLoading(false);
-  }, [assetPickerSearch, assetPickerImages.length]);
-
-  // Add image from asset picker to bulk pool
-  const handleAssetPickerSelect = (image: AssetWithUrl) => {
-    if (bulkImagePool.some((img) => img.id === image.id)) {
-      toast.error("Image already in pool");
-      return;
-    }
-    setBulkImagePool((prev) => [...prev, { id: image.id, url: image.signed_url }]);
-    toast.success("Added to pool");
-  };
-
-  // Upload new image in asset picker dialog
-  const handleAssetPickerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
-      return;
-    }
-    if (file.size > 50 * 1024 * 1024) {
-      toast.error("File exceeds 50MB limit");
-      return;
-    }
-
-    setAssetPickerUploading(true);
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
-
-      const uuid = crypto.randomUUID();
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `${user.id}/talking-head/${uuid}_${safeName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("assets")
-        .upload(filePath, file, { contentType: file.type, upsert: false });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = await supabase.storage
-        .from("assets")
-        .createSignedUrl(filePath, 3600);
-
-      if (urlData?.signedUrl) {
-        setBulkImagePool((prev) => [...prev, { id: uuid, url: urlData.signedUrl }]);
-        toast.success("Image uploaded and added to pool");
-      }
-    } catch {
-      toast.error("Upload failed");
-    } finally {
-      setAssetPickerUploading(false);
-      if (assetPickerFileInputRef.current) assetPickerFileInputRef.current.value = "";
-    }
-  };
-
-  /**
-   * Upload a single image directly to Supabase Storage from the browser.
-   * Bypasses the API route to avoid Vercel's 4.5MB body limit.
-   */
   const handleImageUpload = async (file: File, targetJobId?: string) => {
     if (!file || !file.type.startsWith("image/")) return null;
     if (file.size > 50 * 1024 * 1024) {
@@ -294,55 +164,19 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
     setUploading(true);
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Not authenticated");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("tags", JSON.stringify(["talking-head", "portrait"]));
+
+      const res = await fetch("/api/assets/upload", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || "Upload failed");
         return null;
       }
 
-      // Upload directly to Supabase Storage
-      const uuid = crypto.randomUUID();
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = `${user.id}/image/${uuid}_${safeName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("assets")
-        .upload(filePath, file, { contentType: file.type, upsert: false });
-
-      if (uploadError) {
-        toast.error(`Upload failed: ${uploadError.message}`);
-        return null;
-      }
-
-      // Create asset record in DB
-      const { data: asset, error: dbError } = await supabase
-        .from("assets")
-        .insert({
-          user_id: user.id,
-          filename: file.name,
-          file_path: filePath,
-          file_type: "image",
-          mime_type: file.type,
-          file_size: file.size,
-          tags: ["talking-head", "portrait"],
-          metadata: {},
-        })
-        .select("id")
-        .single();
-
-      if (dbError) {
-        await supabase.storage.from("assets").remove([filePath]);
-        toast.error(`Database error: ${dbError.message}`);
-        return null;
-      }
-
-      // Get signed URL
-      const { data: urlData } = await supabase.storage
-        .from("assets")
-        .createSignedUrl(filePath, 3600);
-
-      const uploaded = { id: asset.id, url: urlData?.signedUrl || "" };
+      const uploaded = { id: data.asset.id, url: data.asset.signed_url };
       const jobIdToUpdate = targetJobId || pickerJobId;
       if (jobIdToUpdate) {
         updateJob(jobIdToUpdate, { imageId: uploaded.id, imageUrl: uploaded.url });
@@ -393,23 +227,11 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
     await handleImageUpload(file, jobId);
   };
 
-  /**
-   * Upload multiple images directly to Supabase Storage from the browser.
-   * Uses concurrency limit of 3 and bypasses the API route body size limit.
-   */
   const uploadBulkImages = async (files: File[] | FileList) => {
     setBulkUploading(true);
+    let uploadedCount = 0;
+    const uploadPromises = [];
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("Not authenticated");
-      setBulkUploading(false);
-      return;
-    }
-
-    // Validate and collect eligible files
-    const validFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (!file.type.startsWith("image/")) continue;
@@ -417,83 +239,35 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
         toast.error(`File "${file.name}" exceeds 50MB limit`);
         continue;
       }
-      validFiles.push(file);
-    }
 
-    if (validFiles.length === 0) {
-      setBulkUploading(false);
-      return;
-    }
-
-    // Upload with concurrency limit of 3
-    const CONCURRENCY = 3;
-    const uploadedImages: Array<{ id: string; url: string }> = [];
-    let failedCount = 0;
-
-    for (let i = 0; i < validFiles.length; i += CONCURRENCY) {
-      const batch = validFiles.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.all(
-        batch.map(async (file) => {
+      uploadPromises.push(
+        (async () => {
           try {
-            const uuid = crypto.randomUUID();
-            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-            const filePath = `${user.id}/image/${uuid}_${safeName}`;
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("tags", JSON.stringify(["talking-head", "portrait"]));
 
-            const { error: uploadError } = await supabase.storage
-              .from("assets")
-              .upload(filePath, file, { contentType: file.type, upsert: false });
+            const res = await fetch("/api/assets/upload", { method: "POST", body: formData });
+            const data = await res.json();
 
-            if (uploadError) return null;
-
-            const { data: asset, error: dbError } = await supabase
-              .from("assets")
-              .insert({
-                user_id: user.id,
-                filename: file.name,
-                file_path: filePath,
-                file_type: "image",
-                mime_type: file.type,
-                file_size: file.size,
-                tags: ["talking-head", "portrait"],
-                metadata: {},
-              })
-              .select("id")
-              .single();
-
-            if (dbError) {
-              await supabase.storage.from("assets").remove([filePath]);
-              return null;
+            if (res.ok) {
+              return { id: data.asset.id, url: data.asset.signed_url };
             }
-
-            const { data: urlData } = await supabase.storage
-              .from("assets")
-              .createSignedUrl(filePath, 3600);
-
-            if (!urlData?.signedUrl) return null;
-            return { id: asset.id, url: urlData.signedUrl };
+            return null;
           } catch {
             return null;
           }
-        })
+        })()
       );
-
-      for (const result of batchResults) {
-        if (result) {
-          uploadedImages.push(result);
-        } else {
-          failedCount++;
-        }
-      }
     }
+
+    const results = await Promise.all(uploadPromises);
+    const uploadedImages = results.filter(Boolean) as Array<{ id: string; url: string }>;
 
     if (uploadedImages.length > 0) {
       setBulkImagePool((prev) => [...prev, ...uploadedImages]);
-      toast.success(`${uploadedImages.length} image${uploadedImages.length === 1 ? '' : 's'} uploaded to pool`);
-      if (failedCount > 0) {
-        toast.error(`${failedCount} image${failedCount === 1 ? '' : 's'} failed to upload`);
-      }
-    } else {
-      toast.error("Failed to upload images");
+      uploadedCount = uploadedImages.length;
+      toast.success(`${uploadedCount} image${uploadedCount === 1 ? '' : 's'} uploaded to pool`);
     }
 
     setBulkUploading(false);
@@ -546,30 +320,21 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
   const assignPoolImages = () => {
     const emptyJobs = jobs.filter(j => j.status === "pending" && j.script.trim() && !j.imageId && !j.imageUrl);
-    if (emptyJobs.length === 0 || bulkImagePool.length === 0) return { assignedCount: 0, assignedJobIds: [] };
+    if (emptyJobs.length === 0 || bulkImagePool.length === 0) return;
 
     const available = [...bulkImagePool].sort(() => Math.random() - 0.5);
     const assignCount = Math.min(emptyJobs.length, available.length);
 
-    const updatedJobs: Array<{ id: string; imageId: string; imageUrl: string }> = [];
-    const assignedJobIds: string[] = [];
     for (let i = 0; i < assignCount; i++) {
-      const jobId = emptyJobs[i].id;
-      updatedJobs.push({ id: jobId, imageId: available[i].id, imageUrl: available[i].url });
-      assignedJobIds.push(jobId);
+      updateJob(emptyJobs[i].id, { imageId: available[i].id, imageUrl: available[i].url });
     }
-    setJobs(prev => prev.map(j => {
-      const update = updatedJobs.find(u => u.id === j.id);
-      return update ? { ...j, imageId: update.imageId, imageUrl: update.imageUrl } : j;
-    }));
 
-    return { assignedCount: assignCount, assignedJobIds };
+    return assignCount;
   };
 
-  const addCaptionsToJob = useCallback(async (jobId: string, videoUrl: string, audioUrl: string, customSettingsOverride?: CustomCaptionSettings) => {
+  const addCaptionsToJob = useCallback(async (jobId: string, videoUrl: string, audioUrl: string) => {
     updateJob(jobId, { status: "captioning" });
     try {
-      // Step 1: Transcribe audio to get word timestamps
       const transcribeRes = await fetch("/api/talking-head/transcribe-audio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -578,78 +343,34 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
       const transcribeData = await transcribeRes.json();
 
       if (!transcribeRes.ok || !transcribeData.words?.length) {
-        const reason = transcribeData.error || "No word timestamps returned";
-        console.error("Caption transcription failed:", reason);
-        toast.warning(`Captions skipped: transcription failed — ${reason}`);
+        console.error("Caption transcription failed:", transcribeData.error);
         updateJob(jobId, { status: "completed", videoUrl });
         return;
       }
 
-      // Step 2: Burn captions into video via FFmpeg
       const captionRes = await fetch("/api/talking-head/add-captions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl, words: transcribeData.words, customSettings: customSettingsOverride || captionSettings }),
+        body: JSON.stringify({ videoUrl, words: transcribeData.words, customSettings: captionSettings }),
       });
       const captionData = await captionRes.json();
 
       if (!captionRes.ok) {
-        const reason = captionData.error || "Unknown error";
-        console.error("Caption burn-in failed:", reason);
-        toast.warning(`Captions skipped: burn-in failed — ${reason}`);
-        updateJob(jobId, { status: "completed", videoUrl, words: transcribeData.words });
+        console.error("Caption burn-in failed:", captionData.error);
+        updateJob(jobId, { status: "completed", videoUrl });
         return;
       }
 
-      updateJob(jobId, { status: "completed", captionedVideoUrl: captionData.signedUrl, videoAssetId: captionData.assetId, words: transcribeData.words });
+      updateJob(jobId, { status: "completed", captionedVideoUrl: captionData.signedUrl, videoAssetId: captionData.assetId });
     } catch (err) {
-      const reason = err instanceof Error ? err.message : "Unknown error";
       console.error("Caption error:", err);
-      toast.warning(`Captions skipped: ${reason}`);
       updateJob(jobId, { status: "completed", videoUrl });
     }
   }, [captionSettings]);
 
-  const handleRecaption = async () => {
-    if (!recaptionJobId) return;
-
-    const job = jobs.find((j) => j.id === recaptionJobId);
-    if (!job || !job.videoUrl || !job.words || !job.words.length) {
-      toast.error("Cannot re-caption: missing video or word timestamps");
-      setRecaptionJobId(null);
-      return;
-    }
-
-    setRecaptioning(true);
-    try {
-      const captionRes = await fetch("/api/talking-head/add-captions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ videoUrl: job.videoUrl, words: job.words, customSettings: recaptionSettings }),
-      });
-      const captionData = await captionRes.json();
-
-      if (!captionRes.ok) {
-        toast.error(captionData.error || "Failed to re-caption video");
-        setRecaptioning(false);
-        return;
-      }
-
-      updateJob(job.id, { captionedVideoUrl: captionData.signedUrl, videoAssetId: captionData.assetId });
-      toast.success("Captions updated successfully");
-      setRecaptionJobId(null);
-    } catch (err) {
-      console.error("Re-caption error:", err);
-      toast.error("Failed to re-caption video");
-    } finally {
-      setRecaptioning(false);
-    }
-  };
-
   const pollJob = useCallback(async (jobId: string, taskId: string, shouldCaption: boolean, audioSignedUrlForCaption: string) => {
     pollingRefs.current.set(jobId, true);
     let attempts = 0;
-    let consecutiveErrors = 0;
 
     while (pollingRefs.current.get(jobId) && attempts < MAX_POLL_ATTEMPTS) {
       attempts++;
@@ -676,25 +397,17 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
           return;
         }
 
-        consecutiveErrors = 0;
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      } catch (err) {
-        consecutiveErrors++;
-        console.warn(`Poll error for job ${jobId} (attempt ${attempts}):`, err);
-
-        if (consecutiveErrors >= 3) {
-          pollingRefs.current.set(jobId, false);
-          updateJob(jobId, { status: "failed", error: "Network error after multiple retries" });
-          return;
-        }
-
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      } catch {
+        pollingRefs.current.set(jobId, false);
+        updateJob(jobId, { status: "failed", error: "Network error" });
+        return;
       }
     }
 
     if (pollingRefs.current.get(jobId)) {
       pollingRefs.current.set(jobId, false);
-      updateJob(jobId, { status: "failed", error: `Timed out after ${attempts} polls (${Math.round(attempts * POLL_INTERVAL_MS / 1000)}s)` });
+      updateJob(jobId, { status: "failed", error: "Timed out" });
     }
   }, [addCaptionsToJob]);
 
@@ -752,54 +465,32 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
   const handleRunAll = async () => {
     if (!selectedModel) {
-      toast.error("Select a model first");
+      toast.error("Select an AI model first");
       return;
     }
 
-    const emptyJobs = jobs.filter((j) => j.status === "pending" && j.script.trim() && !j.imageId && !j.imageUrl);
+    const emptyJobs = jobs.filter(j => j.status === "pending" && j.script.trim() && !j.imageId && !j.imageUrl);
     if (emptyJobs.length > 0) {
       if (bulkImagePool.length < emptyJobs.length) {
-        toast.error(`Not enough images in pool. Need ${emptyJobs.length} image${emptyJobs.length === 1 ? "" : "s"}, have ${bulkImagePool.length}. Add more images or select manually.`);
+        toast.error(`Not enough images in pool. Need ${emptyJobs.length} image${emptyJobs.length === 1 ? '' : 's'}, have ${bulkImagePool.length}. Add more images or select manually.`);
         return;
       }
 
-      const { assignedCount, assignedJobIds } = assignPoolImages();
-      if (assignedCount === 0) {
-        toast.error("Failed to assign images from pool");
-        return;
-      }
+      assignPoolImages();
+    }
 
-      // Wait a tick for React state to update
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    const validJobs = jobs.filter((j) => j.script.trim() && j.imageId && j.imageUrl && j.status === "pending");
 
-      // Now read jobs again - they should have images
-      const allValidJobs = jobs.filter((j) => j.script.trim() && j.imageId && j.imageUrl && j.status === "pending");
+    if (validJobs.length === 0) {
+      toast.error("No valid jobs to process. Each needs a script and image.");
+      return;
+    }
 
-      if (allValidJobs.length === 0) {
-        toast.error("No valid jobs to process. Each needs a script and image.");
-        return;
-      }
+    setRunning(true);
+    toast.info(`Starting ${validJobs.length} video generation${validJobs.length > 1 ? "s" : ""}...`);
 
-      setRunning(true);
-      toast.info(`Starting ${allValidJobs.length} video generation${allValidJobs.length > 1 ? "s" : ""}...`);
-
-      for (const job of allValidJobs) {
-        processJob(job, selectedModel);
-      }
-    } else {
-      const validJobs = jobs.filter((j) => j.script.trim() && j.imageId && j.imageUrl && j.status === "pending");
-
-      if (validJobs.length === 0) {
-        toast.error("No valid jobs to process. Each needs a script and image.");
-        return;
-      }
-
-      setRunning(true);
-      toast.info(`Starting ${validJobs.length} video generation${validJobs.length > 1 ? "s" : ""}...`);
-
-      for (const job of validJobs) {
-        processJob(job, selectedModel);
-      }
+    for (const job of validJobs) {
+      processJob(job, selectedModel);
     }
   };
 
@@ -833,110 +524,80 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
   return (
     <div className="space-y-6">
-      <StepSection
-        step={1}
-        title="Select Model & Resolution"
-        description="Choose which model voice to use for narration and the output video resolution. Models need voice settings configured in the Models page."
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Model (Voice)</Label>
-            {voiceModels.length === 0 ? (
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  No models with voice configured. <a href="/dashboard/models" className="underline font-medium">Add voice settings</a>
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Select value={selectedModelId} onValueChange={setSelectedModelId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select model..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {voiceModels.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      <span className="flex items-center gap-2">
-                        {m.reference_images.length > 0 ? (
-                          <img src={m.reference_images[0].signed_url} alt="" className="h-5 w-5 rounded-sm object-cover" />
-                        ) : (
-                          <Mic className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                        {m.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Resolution</Label>
-            <Select value={resolution} onValueChange={setResolution}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>AI Model (Voice)</Label>
+          {voiceModels.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No AI models with voice configured. <a href="/dashboard/models" className="underline font-medium">Add voice settings</a>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Select value={selectedModelId} onValueChange={setSelectedModelId}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Select AI model..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="480p">480p — $0.03/sec</SelectItem>
-                <SelectItem value="720p">720p — $0.06/sec</SelectItem>
+                {voiceModels.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    <span className="flex items-center gap-2">
+                      {m.reference_images.length > 0 ? (
+                        <img src={m.reference_images[0].signed_url} alt="" className="h-5 w-5 rounded-sm object-cover" />
+                      ) : (
+                        <Mic className="h-3.5 w-3.5 text-muted-foreground" />
+                      )}
+                      {m.name}
+                    </span>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-          </div>
-        </div>
-      </StepSection>
-
-      <StepSection
-        step={2}
-        title="Captions (Optional)"
-        description="Add auto-synced captions to your videos. Choose from TikTok-style presets or customize the look."
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Subtitles className="h-4 w-4 text-muted-foreground" />
-              <Label>Add Captions</Label>
-            </div>
-            <Switch checked={captionsEnabled} onCheckedChange={setCaptionsEnabled} disabled={running} />
-          </div>
-
-          {captionsEnabled && !running && (
-            <CaptionCustomizerInline settings={captionSettings} onChange={setCaptionSettings} />
           )}
         </div>
-      </StepSection>
 
-      <StepSection
-        step={3}
-        title="Upload Images"
-        description="Upload portrait images for your videos. Images are randomly assigned to scripts that don't have a manually selected image."
-      >
+        <div className="space-y-2">
+          <Label>Resolution</Label>
+          <Select value={resolution} onValueChange={setResolution}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="480p">480p — $0.03/sec</SelectItem>
+              <SelectItem value="720p">720p — $0.06/sec</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Subtitles className="h-4 w-4 text-muted-foreground" />
+            <Label>Add Captions</Label>
+          </div>
+          <Switch checked={captionsEnabled} onCheckedChange={setCaptionsEnabled} disabled={running} />
+        </div>
+
+        {captionsEnabled && !running && (
+          <CaptionCustomizerInline settings={captionSettings} onChange={setCaptionSettings} />
+        )}
+      </div>
+
+      <div className="space-y-3">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-base">Bulk Image Pool</Label>
-            <div className="flex items-center gap-2">
-              {bulkImagePool.length > 0 && (
-                <button
-                  type="button"
-                  onClick={clearBulkPool}
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  Clear All
-                </button>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setShowAssetPicker(true);
-                  fetchAssetPickerImages();
-                }}
-                disabled={running}
+            {bulkImagePool.length > 0 && (
+              <button
+                type="button"
+                onClick={clearBulkPool}
+                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
               >
-                <ImageIcon className="h-4 w-4 mr-1.5" />
-                Select from Library
-              </Button>
-            </div>
+                Clear All
+              </button>
+            )}
           </div>
 
           <div
@@ -999,21 +660,16 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
             )}
           </div>
         </div>
-      </StepSection>
+      </div>
 
-      <StepSection
-        step={4}
-        title="Add Scripts"
-        description="Add one or more scripts. Each script becomes a separate video. You can manually assign images or let the pool handle it."
-      >
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-base">Videos ({jobs.length})</Label>
-            <Button variant="outline" size="sm" onClick={addJob} disabled={running}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add Video
-            </Button>
-          </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label className="text-base">Videos ({jobs.length})</Label>
+          <Button variant="outline" size="sm" onClick={addJob} disabled={running}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Video
+          </Button>
+        </div>
 
         {jobs.map((job, idx) => (
           <div
@@ -1146,19 +802,6 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
                     <Download className="h-3.5 w-3.5 mr-1" />
                     Download
                   </Button>
-                  {job.words && job.words.length > 0 && job.videoUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setRecaptionJobId(job.id);
-                        setRecaptionSettings({ ...DEFAULT_CAPTION_SETTINGS });
-                      }}
-                    >
-                      <Subtitles className="h-3.5 w-3.5 mr-1" />
-                      Re-caption
-                    </Button>
-                  )}
                   {job.videoAssetId ? (
                     <Badge variant="secondary" className="gap-1">
                       <CheckCircle2 className="h-3 w-3" />
@@ -1176,9 +819,8 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
           </div>
         ))}
       </div>
-    </StepSection>
 
-    {running && (
+      {running && (
         <div className="flex items-center gap-3 text-sm">
           {processingCount > 0 && (
             <Badge variant="secondary">
@@ -1305,144 +947,6 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
               Click an image to select it for this video. Uploaded images are auto-saved to your asset library.
             </p>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Asset Picker Dialog for Bulk Pool */}
-      <Dialog open={showAssetPicker} onOpenChange={setShowAssetPicker}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Select from Library</DialogTitle>
-          </DialogHeader>
-
-          {/* Search + Upload */}
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search images..."
-                value={assetPickerSearch}
-                onChange={(e) => {
-                  setAssetPickerSearch(e.target.value);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    fetchAssetPickerImages();
-                  }
-                }}
-                className="pl-9"
-              />
-            </div>
-            <input
-              ref={assetPickerFileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAssetPickerUpload}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => assetPickerFileInputRef.current?.click()}
-              disabled={assetPickerUploading}
-            >
-              {assetPickerUploading ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Upload className="h-4 w-4 mr-1" />
-              )}
-              Upload
-            </Button>
-          </div>
-
-          {/* Model's Reference Images */}
-          {selectedModel && selectedModel.reference_images.length > 0 && (
-            <div>
-              <p className="text-xs font-medium mb-1.5">{selectedModel.name}'s Reference Images</p>
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {selectedModel.reference_images.map((img) => (
-                  <button
-                    key={img.id}
-                    type="button"
-                    className={cn(
-                      "h-14 w-14 rounded-md overflow-hidden border-2 border-transparent hover:border-accent-blue/50 transition-all flex-shrink-0",
-                      bulkImagePool.some((p) => p.id === img.id) && "opacity-50"
-                    )}
-                    onClick={() => handleAssetPickerSelect(img)}
-                    disabled={bulkImagePool.some((p) => p.id === img.id)}
-                  >
-                    <img src={img.signed_url} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* All Images Grid */}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {assetPickerImages.length === 0 && !assetPickerLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <p className="text-sm text-muted-foreground">No images found.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 pb-2">
-                {assetPickerImages.map((image) => (
-                  <button
-                    key={image.id}
-                    type="button"
-                    className={cn(
-                      "relative aspect-square overflow-hidden rounded-md border-2 border-transparent hover:border-accent-blue/50 transition-all",
-                      bulkImagePool.some((p) => p.id === image.id) && "opacity-50"
-                    )}
-                    onClick={() => handleAssetPickerSelect(image)}
-                    disabled={bulkImagePool.some((p) => p.id === image.id)}
-                  >
-                    <img src={image.signed_url} alt={image.filename} className="h-full w-full object-cover" loading="lazy" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {assetPickerImages.length < assetPickerTotal && (
-              <div className="flex justify-center py-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchAssetPickerImages(true)}
-                  disabled={assetPickerLoading}
-                >
-                  {assetPickerLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load More"}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Click an image to add it to the bulk pool. Images are added to your asset library automatically.
-          </p>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={recaptionJobId !== null} onOpenChange={(open) => !open && setRecaptionJobId(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Re-caption Video</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <p className="text-sm text-muted-foreground">
-              Choose new caption styles. This will regenerate the captioned video with your new settings.
-            </p>
-            <CaptionCustomizerInline settings={recaptionSettings} onChange={setRecaptionSettings} />
-            <div className="flex gap-2 justify-end pt-2">
-              <Button variant="outline" onClick={() => setRecaptionJobId(null)} disabled={recaptioning}>
-                Cancel
-              </Button>
-              <Button onClick={handleRecaption} disabled={recaptioning}>
-                {recaptioning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Subtitles className="h-4 w-4 mr-2" />}
-                {recaptioning ? "Recaptioning..." : "Apply New Captions"}
-              </Button>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </div>
