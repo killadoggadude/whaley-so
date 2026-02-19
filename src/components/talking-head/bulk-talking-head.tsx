@@ -128,6 +128,15 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const [bulkDragOver, setBulkDragOver] = useState(false);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Asset picker dialog for bulk pool
+  const [showAssetPicker, setShowAssetPicker] = useState(false);
+  const [assetPickerImages, setAssetPickerImages] = useState<AssetWithUrl[]>([]);
+  const [assetPickerLoading, setAssetPickerLoading] = useState(false);
+  const [assetPickerTotal, setAssetPickerTotal] = useState(0);
+  const [assetPickerSearch, setAssetPickerSearch] = useState("");
+  const assetPickerFileInputRef = useRef<HTMLInputElement>(null);
+  const [assetPickerUploading, setAssetPickerUploading] = useState(false);
+
   // Re-caption dialog state
   const [recaptionJobId, setRecaptionJobId] = useState<string | null>(null);
   const [recaptionSettings, setRecaptionSettings] = useState<CustomCaptionSettings>({ ...DEFAULT_CAPTION_SETTINGS });
@@ -192,6 +201,83 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
     if (pickerJobId) {
       updateJob(pickerJobId, { imageId: image.id, imageUrl: image.signed_url });
       setPickerJobId(null);
+    }
+  };
+
+  // Fetch images for asset picker dialog
+  const fetchAssetPickerImages = useCallback(async (append: boolean = false) => {
+    setAssetPickerLoading(true);
+    const offset = append ? assetPickerImages.length : 0;
+    const result = await getAssetsAction({
+      file_type: "image",
+      search: assetPickerSearch || undefined,
+      sort_by: "created_at",
+      sort_order: "desc",
+      limit: 30,
+      offset,
+    });
+    if (append) {
+      setAssetPickerImages((prev) => [...prev, ...result.assets]);
+    } else {
+      setAssetPickerImages(result.assets);
+    }
+    setAssetPickerTotal(result.total);
+    setAssetPickerLoading(false);
+  }, [assetPickerSearch, assetPickerImages.length]);
+
+  // Add image from asset picker to bulk pool
+  const handleAssetPickerSelect = (image: AssetWithUrl) => {
+    if (bulkImagePool.some((img) => img.id === image.id)) {
+      toast.error("Image already in pool");
+      return;
+    }
+    setBulkImagePool((prev) => [...prev, { id: image.id, url: image.signed_url }]);
+    toast.success("Added to pool");
+  };
+
+  // Upload new image in asset picker dialog
+  const handleAssetPickerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("File exceeds 50MB limit");
+      return;
+    }
+
+    setAssetPickerUploading(true);
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const uuid = crypto.randomUUID();
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filePath = `${user.id}/talking-head/${uuid}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(filePath, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = await supabase.storage
+        .from("assets")
+        .createSignedUrl(filePath, 3600);
+
+      if (urlData?.signedUrl) {
+        setBulkImagePool((prev) => [...prev, { id: uuid, url: urlData.signedUrl }]);
+        toast.success("Image uploaded and added to pool");
+      }
+    } catch {
+      toast.error("Upload failed");
+    } finally {
+      setAssetPickerUploading(false);
+      if (assetPickerFileInputRef.current) assetPickerFileInputRef.current.value = "";
     }
   };
 
@@ -828,15 +914,29 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-base">Bulk Image Pool</Label>
-            {bulkImagePool.length > 0 && (
-              <button
-                type="button"
-                onClick={clearBulkPool}
-                className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+            <div className="flex items-center gap-2">
+              {bulkImagePool.length > 0 && (
+                <button
+                  type="button"
+                  onClick={clearBulkPool}
+                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  Clear All
+                </button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowAssetPicker(true);
+                  fetchAssetPickerImages();
+                }}
+                disabled={running}
               >
-                Clear All
-              </button>
-            )}
+                <ImageIcon className="h-4 w-4 mr-1.5" />
+                Select from Library
+              </Button>
+            </div>
           </div>
 
           <div
@@ -1205,6 +1305,144 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
               Click an image to select it for this video. Uploaded images are auto-saved to your asset library.
             </p>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Asset Picker Dialog for Bulk Pool */}
+      <Dialog open={showAssetPicker} onOpenChange={setShowAssetPicker}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Select from Library</DialogTitle>
+          </DialogHeader>
+
+          {/* Search + Upload */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search images..."
+                value={assetPickerSearch}
+                onChange={(e) => {
+                  setAssetPickerSearch(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    fetchAssetPickerImages();
+                  }
+                }}
+                className="pl-9"
+              />
+            </div>
+            <input
+              ref={assetPickerFileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAssetPickerUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => assetPickerFileInputRef.current?.click()}
+              disabled={assetPickerUploading}
+            >
+              {assetPickerUploading ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4 mr-1" />
+              )}
+              Upload
+            </Button>
+          </div>
+
+          {/* Latest Images Preview Row */}
+          {assetPickerImages.length > 0 && (
+            <div>
+              <p className="text-xs font-medium mb-1.5">Latest Images (click to add)</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {assetPickerImages.slice(0, 10).map((img) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    className={cn(
+                      "h-14 w-14 rounded-md overflow-hidden border-2 border-transparent hover:border-accent-blue/50 transition-all flex-shrink-0",
+                      bulkImagePool.some((p) => p.id === img.id) && "opacity-50"
+                    )}
+                    onClick={() => handleAssetPickerSelect(img)}
+                    disabled={bulkImagePool.some((p) => p.id === img.id)}
+                  >
+                    <img src={img.signed_url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Model's Reference Images */}
+          {selectedModel && selectedModel.reference_images.length > 0 && (
+            <div>
+              <p className="text-xs font-medium mb-1.5">{selectedModel.name}'s Reference Images</p>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {selectedModel.reference_images.map((img) => (
+                  <button
+                    key={img.id}
+                    type="button"
+                    className={cn(
+                      "h-14 w-14 rounded-md overflow-hidden border-2 border-transparent hover:border-accent-blue/50 transition-all flex-shrink-0",
+                      bulkImagePool.some((p) => p.id === img.id) && "opacity-50"
+                    )}
+                    onClick={() => handleAssetPickerSelect(img)}
+                    disabled={bulkImagePool.some((p) => p.id === img.id)}
+                  >
+                    <img src={img.signed_url} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* All Images Grid */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {assetPickerImages.length === 0 && !assetPickerLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-sm text-muted-foreground">No images found.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 pb-2">
+                {assetPickerImages.map((image) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    className={cn(
+                      "relative aspect-square overflow-hidden rounded-md border-2 border-transparent hover:border-accent-blue/50 transition-all",
+                      bulkImagePool.some((p) => p.id === image.id) && "opacity-50"
+                    )}
+                    onClick={() => handleAssetPickerSelect(image)}
+                    disabled={bulkImagePool.some((p) => p.id === image.id)}
+                  >
+                    <img src={image.signed_url} alt={image.filename} className="h-full w-full object-cover" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {assetPickerImages.length < assetPickerTotal && (
+              <div className="flex justify-center py-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchAssetPickerImages(true)}
+                  disabled={assetPickerLoading}
+                >
+                  {assetPickerLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load More"}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Click an image to add it to the bulk pool. Images are added to your asset library automatically.
+          </p>
         </DialogContent>
       </Dialog>
 
