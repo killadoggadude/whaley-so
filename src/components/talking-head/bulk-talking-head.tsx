@@ -32,6 +32,7 @@ import {
   Subtitles,
   RefreshCw,
   Info,
+  FileText,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CaptionCustomizerInline } from "./caption-customizer";
@@ -49,6 +50,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getAssetsAction } from "@/app/dashboard/assets/actions";
 import type { AiModelWithImages, AssetWithUrl } from "@/types";
+import { ScriptPicker, type Script } from "@/components/scripts/script-picker";
 
 interface BulkTalkingHeadProps {
   aiModels: AiModelWithImages[];
@@ -142,6 +144,11 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const [recaptionSettings, setRecaptionSettings] = useState<CustomCaptionSettings>({ ...DEFAULT_CAPTION_SETTINGS });
   const [recaptioning, setRecaptioning] = useState(false);
 
+  const [scriptPickerOpen, setScriptPickerOpen] = useState(false);
+  const [scriptPickerJobId, setScriptPickerJobId] = useState<string | null>(null);
+  const [usedScriptIds, setUsedScriptIds] = useState<string[]>([]);
+  const [scriptDragOverJobId, setScriptDragOverJobId] = useState<string | null>(null);
+
   const selectedModel = voiceModels.find((m) => m.id === selectedModelId) || null;
 
   useEffect(() => {
@@ -162,6 +169,42 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
   const updateJob = (id: string, updates: Partial<BulkJob>) => {
     setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, ...updates } : j)));
+  };
+
+  const handleScriptSelect = (script: Script) => {
+    if (!scriptPickerJobId) return;
+    updateJob(scriptPickerJobId, { script: script.script_text });
+    setUsedScriptIds((prev) => [...prev, script.id]);
+    setScriptPickerOpen(false);
+    setScriptPickerJobId(null);
+  };
+
+  const handleScriptDragOver = (e: React.DragEvent, jobId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setScriptDragOverJobId(jobId);
+  };
+
+  const handleScriptDragLeave = () => {
+    setScriptDragOverJobId(null);
+  };
+
+  const handleScriptDrop = (e: React.DragEvent, jobId: string) => {
+    e.preventDefault();
+    setScriptDragOverJobId(null);
+    try {
+      const script = JSON.parse(e.dataTransfer.getData("text/plain")) as Script;
+      if (usedScriptIds.includes(script.id)) return;
+      updateJob(jobId, { script: script.script_text });
+      setUsedScriptIds((prev) => [...prev, script.id]);
+    } catch {
+      // Not a valid script drop
+    }
+  };
+
+  const openScriptPicker = (jobId: string) => {
+    setScriptPickerJobId(jobId);
+    setScriptPickerOpen(true);
   };
 
   const fetchPickerImages = useCallback(async (append: boolean) => {
@@ -1038,14 +1081,34 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
 
             {job.status === "pending" && (
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Script</Label>
+                <div
+                  className="space-y-1.5"
+                  onDragOver={(e) => handleScriptDragOver(e, job.id)}
+                  onDragLeave={handleScriptDragLeave}
+                  onDrop={(e) => handleScriptDrop(e, job.id)}
+                >
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Script</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => openScriptPicker(job.id)}
+                      disabled={running}
+                    >
+                      <FileText className="h-3 w-3 mr-1" />
+                      Library
+                    </Button>
+                  </div>
                   <Textarea
                     value={job.script}
                     onChange={(e) => updateJob(job.id, { script: e.target.value })}
-                    placeholder="Paste the script for this video..."
+                    placeholder="Paste the script for this video, or drag from Library..."
                     rows={4}
-                    className="resize-y text-sm"
+                    className={cn(
+                      "resize-y text-sm",
+                      scriptDragOverJobId === job.id && "ring-2 ring-accent-blue ring-offset-1"
+                    )}
                     disabled={running}
                   />
                   <span className="text-xs text-muted-foreground">{job.script.trim().split(/\s+/).filter(Boolean).length} words</span>
@@ -1445,6 +1508,13 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ScriptPicker
+        open={scriptPickerOpen}
+        onOpenChange={setScriptPickerOpen}
+        usedScriptIds={usedScriptIds}
+        onSelect={handleScriptSelect}
+      />
     </div>
   );
 }
