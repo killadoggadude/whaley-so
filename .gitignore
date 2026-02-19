@@ -26,13 +26,10 @@ node_modules/
 
 # Next.js
 .next/
-web/.next/
 out/
-web/out/
 
-# Next.js environment
-web/.env.local
-web/.env.production.local
+# Old web/ directory (legacy, not used)
+web/
 
 # Vercel
 .vercel

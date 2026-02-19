@@ -13,6 +13,7 @@ import {
   Video,
   Music,
   Clapperboard,
+  FileText,
 } from "lucide-react";
 
 const navItems = [
@@ -55,6 +56,11 @@ const navItems = [
     title: "Motion Control",
     href: "/dashboard/tools/motion-control",
     icon: Clapperboard,
+  },
+  {
+    title: "Scripts",
+    href: "/dashboard/tools/scripts",
+    icon: FileText,
   },
   {
     title: "Settings",
