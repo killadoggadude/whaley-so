@@ -99,6 +99,9 @@ export default function HomePage() {
           <img src="/thirst-so-logo.png" alt="thirst.so" className="h-10 w-auto" />
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
+              <Link href="/gallery">Gallery</Link>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Sign In</Link>
             </Button>
             <Button size="sm" asChild>
@@ -340,6 +343,9 @@ export default function HomePage() {
             </div>
             
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link href="/gallery" className="hover:text-foreground transition-colors">
+                Community Gallery
+              </Link>
               <Link href="/login" className="hover:text-foreground transition-colors">
                 Sign In
               </Link>

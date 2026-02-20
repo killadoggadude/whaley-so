@@ -1,11 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { ViralReelsLibrary } from "@/components/viral-reels/viral-reels-library";
-import { getViralReelsAction } from "./actions";
+import { CuratedReelsLibrary } from "@/components/viral-reels/curated-reels-library";
 
 export const metadata = {
-  title: "Viral Reels | AI OFM",
-  description: "Save and organize viral reels for content inspiration",
+  title: "Viral Reels | thirst.so",
+  description: "Discover viral reels to recreate for your content",
 };
 
 export default async function ViralReelsPage() {
@@ -16,21 +15,26 @@ export default async function ViralReelsPage() {
 
   if (!user) redirect("/login");
 
-  const reelsResult = await getViralReelsAction({ limit: 12, offset: 0 });
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("email")
+    .eq("id", user.id)
+    .single();
+
+  const isAdmin = userProfile?.email === "tobias@thirst.so";
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Viral Reels</h1>
         <p className="text-muted-foreground">
-          Save viral reels as inspiration for your talking head content.
+          {isAdmin
+            ? "Manage the curated library of viral reels for your users."
+            : "Discover viral reels to recreate. Find inspiration from top-performing content."}
         </p>
       </div>
 
-      <ViralReelsLibrary
-        initialReels={reelsResult.reels}
-        initialTotal={reelsResult.total}
-      />
+      <CuratedReelsLibrary isAdmin={isAdmin} />
     </div>
   );
 }

@@ -361,3 +361,183 @@ export async function getReelTagsAction(): Promise<string[]> {
     return [];
   }
 }
+
+// ---- CURATED REELS (Admin + Paid Users) ----
+
+export async function getCuratedReelsAction(filters?: {
+  category?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<{ reels: ViralReel[]; total: number; error?: string; isPaid?: boolean }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { reels: [], total: 0, error: "Not authenticated", isPaid: false };
+
+    const { data: userProfile } = await supabase
+      .from("users")
+      .select("subscription_tier")
+      .eq("id", user.id)
+      .single();
+
+    const isPaid = userProfile?.subscription_tier && userProfile.subscription_tier !== "free";
+
+    let query = supabase
+      .from("viral_reels")
+      .select("*", { count: "exact" })
+      .eq("is_curated", true);
+
+    if (filters?.category && filters.category !== "all") {
+      query = query.eq("category", filters.category);
+    }
+
+    const limit = filters?.limit || 50;
+    const offset = filters?.offset || 0;
+    query = query.order("view_count", { ascending: false }).range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) return { reels: [], total: 0, error: error.message, isPaid };
+
+    return { reels: (data as ViralReel[]) || [], total: count || 0, isPaid };
+  } catch (error) {
+    return {
+      reels: [],
+      total: 0,
+      error: error instanceof Error ? error.message : "Failed to fetch curated reels",
+      isPaid: false,
+    };
+  }
+}
+
+export async function addCuratedReelAction(data: {
+  url: string;
+  category?: "talking_head" | "dancing" | "motion_control" | "general";
+  notes?: string;
+  tags?: string[];
+  viewCount?: number;
+}): Promise<{ reel?: ViralReel; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not authenticated" };
+
+    const { data: userProfile } = await supabase
+      .from("users")
+      .select("email")
+      .eq("id", user.id)
+      .single();
+
+    const trimmedUrl = data.url.trim();
+    if (!trimmedUrl) return { error: "URL is required" };
+
+    const platform = detectPlatform(trimmedUrl);
+    if (!platform) return { error: "Unsupported URL. Please use an Instagram reel link." };
+
+    if (platform === "instagram" && !isValidInstagramReelUrl(trimmedUrl)) {
+      return { error: "Invalid Instagram reel URL. Use format: instagram.com/reel/..." };
+    }
+
+    const shortcode = platform === "instagram" ? extractInstagramShortcode(trimmedUrl) : null;
+
+    const { data: reel, error } = await supabase
+      .from("viral_reels")
+      .insert({
+        user_id: user.id,
+        url: trimmedUrl,
+        platform,
+        shortcode,
+        notes: data.notes?.trim() || "",
+        tags: data.tags || [],
+        is_curated: true,
+        category: data.category || "talking_head",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "23505") {
+        return { error: "This reel is already in the library." };
+      }
+      return { error: error.message };
+    }
+
+    let viewCount = data.viewCount || 0;
+    if (!viewCount) {
+      try {
+        viewCount = await fetchViewCount(trimmedUrl, platform);
+      } catch {
+        console.error("Failed to fetch view count");
+      }
+    }
+
+    await supabase
+      .from("viral_reels")
+      .update({ view_count: viewCount })
+      .eq("id", reel.id);
+
+    (reel as ViralReel).view_count = viewCount;
+
+    try {
+      const thumbBuffer = await fetchThumbnailForReel(trimmedUrl, platform, shortcode);
+      if (thumbBuffer && reel) {
+        const filePath = `thumbnails/viral-reels/${reel.id}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from("assets")
+          .upload(filePath, thumbBuffer, { contentType: "image/jpeg", upsert: true });
+
+        if (!uploadError) {
+          await supabase.from("viral_reels").update({ thumbnail_url: filePath }).eq("id", reel.id);
+          (reel as ViralReel).thumbnail_url = filePath;
+        }
+      }
+    } catch {
+      // Thumbnail fetch failed silently
+    }
+
+    revalidatePath("/dashboard/viral-reels");
+    return { reel: reel as ViralReel };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Failed to add curated reel",
+    };
+  }
+}
+
+export async function getUserSubscriptionAction(): Promise<{
+  tier: string;
+  isPaid: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { tier: "free", isPaid: false, error: "Not authenticated" };
+
+    const { data: userProfile } = await supabase
+      .from("users")
+      .select("subscription_tier")
+      .eq("id", user.id)
+      .single();
+
+    const tier = userProfile?.subscription_tier || "free";
+    const isPaid = tier !== "free";
+
+    return { tier, isPaid };
+  } catch (error) {
+    return {
+      tier: "free",
+      isPaid: false,
+      error: error instanceof Error ? error.message : "Failed to get subscription",
+    };
+  }
+}

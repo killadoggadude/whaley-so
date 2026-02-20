@@ -211,6 +211,7 @@ export interface WordTimestamp {
 // ----- Viral Reels Library -----
 
 export type ReelPlatform = "instagram" | "tiktok" | "youtube";
+export type ReelCategory = "talking_head" | "dancing" | "motion_control" | "general";
 
 export interface ViralReel {
   id: string;
@@ -222,6 +223,8 @@ export interface ViralReel {
   notes: string;
   tags: string[];
   is_favorite: boolean;
+  is_curated: boolean;
+  category: ReelCategory;
   view_count: number;
   created_at: string;
   updated_at: string;
@@ -235,6 +238,27 @@ export interface ViralReelFilters {
   tags?: string[];
   limit?: number;
   offset?: number;
+  is_curated?: boolean;
+  category?: ReelCategory;
+}
+
+// ----- Gallery -----
+
+export type GalleryVideoType = "talking_head" | "dancing" | "motion_control";
+
+export interface GalleryItem {
+  id: string;
+  user_id: string;
+  video_type: GalleryVideoType;
+  video_url: string;
+  thumbnail_url: string | null;
+  script_text: string | null;
+  model_image_url: string | null;
+  views: number;
+  remakes: number;
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 // ----- Generation Queue -----
