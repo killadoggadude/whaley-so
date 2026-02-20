@@ -509,7 +509,7 @@ export function ScriptsClient({
           {scripts.map((script) => (
             <div
               key={script.id}
-              className="flex items-start justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-card-hover hover:border-primary/30 hover:shadow-lg transition-all duration-200 card-hover"
+              className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-card hover:bg-card-hover hover:border-primary/30 hover:shadow-lg transition-all duration-200 card-hover"
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
