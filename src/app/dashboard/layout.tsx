@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen">
       <header className="border-b border-border bg-background">
         <div className="flex items-center justify-between px-4 py-3">
-          <img src="/thirst-logo.png" alt="thirst.so" className="h-8 w-auto" />
+          <img src="/thirst-so-logo.png" alt="thirst.so" className="h-8 w-auto" />
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">{user.email}</span>
             <LogoutButton />
