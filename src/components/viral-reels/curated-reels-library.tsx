@@ -212,6 +212,7 @@ export function CuratedReelsLibrary({ isAdmin }: CuratedReelsLibraryProps) {
                     src={`/api/viral-reels/stored-thumbnail?path=${encodeURIComponent(reel.thumbnail_url)}`}
                     alt="Reel thumbnail"
                     className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -325,6 +326,7 @@ export function CuratedReelsLibrary({ isAdmin }: CuratedReelsLibraryProps) {
                   src={`/api/viral-reels/stored-thumbnail?path=${encodeURIComponent(selectedReel.thumbnail_url)}`}
                   alt="Reel"
                   className="w-full aspect-video object-cover rounded-lg"
+                  loading="lazy"
                 />
               )}
               <div className="grid grid-cols-2 gap-4 text-sm">

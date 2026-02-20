@@ -807,6 +807,7 @@ export function MotionControlWorkflow({
                 src={frameUrl}
                 alt="Extracted first frame"
                 className="max-h-[300px] rounded-md border border-border"
+                loading="lazy"
               />
             </div>
           )}
@@ -893,6 +894,7 @@ export function MotionControlWorkflow({
                     src={frameUrl}
                     alt="Extracted first frame"
                     className="max-h-[250px] rounded-md border border-border"
+                    loading="lazy"
                   />
                 )}
               </div>
@@ -996,6 +998,7 @@ export function MotionControlWorkflow({
                       src={frameUrl}
                       alt="Original frame"
                       className="w-full rounded-md border border-border"
+                      loading="lazy"
                     />
                   </div>
                   <div className="space-y-1">
@@ -1006,6 +1009,7 @@ export function MotionControlWorkflow({
                       src={recreatedImageUrl}
                       alt="Recreated frame"
                       className="w-full rounded-md border border-border"
+                      loading="lazy"
                     />
                   </div>
                 </div>
@@ -1105,7 +1109,7 @@ export function MotionControlWorkflow({
 
               <Button
                 onClick={handleGenerateVideo}
-                className="w-full"
+                className="w-full bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
                 size="lg"
               >
                 <Clapperboard className="h-4 w-4 mr-2" />

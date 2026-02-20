@@ -654,7 +654,7 @@ export function SingleDancingReel({ aiModels }: SingleDancingReelProps) {
         {state === "idle" && (
           <Button
             onClick={handleGenerate}
-            className="w-full"
+            className="w-full bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90"
             size="lg"
             disabled={!selectedImageId || !prompt.trim()}
           >

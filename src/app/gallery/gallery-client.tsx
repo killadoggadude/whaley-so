@@ -157,6 +157,7 @@ export function GalleryClient({
                     src={item.thumbnail_url}
                     alt="Video thumbnail"
                     className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-muted">
@@ -189,13 +190,14 @@ export function GalleryClient({
           <DialogHeader>
             <DialogTitle>Recreate This Video</DialogTitle>
           </DialogHeader>
-          {selectedItem && (
+            {selectedItem && (
             <div className="space-y-4">
               {selectedItem.thumbnail_url && (
                 <img
                   src={selectedItem.thumbnail_url}
                   alt="Video"
                   className="w-full aspect-video object-cover rounded-lg"
+                  loading="lazy"
                 />
               )}
               {selectedItem.script_text && (

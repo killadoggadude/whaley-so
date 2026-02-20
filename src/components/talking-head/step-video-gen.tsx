@@ -495,7 +495,7 @@ export function StepVideoGen({
 
       {/* Action buttons */}
       {state === "idle" && (
-        <Button onClick={handleSubmit} className="w-full" size="lg">
+        <Button onClick={handleSubmit} className="w-full bg-gradient-to-r from-primary to-purple-500 hover:from-primary/90 hover:to-purple-500/90" size="lg">
           <Video className="h-4 w-4 mr-2" />
           Generate Video{captionsEnabled ? " with Captions" : ""}
           {estimatedCost !== null && ` — Est. $${estimatedCost.toFixed(2)}`}

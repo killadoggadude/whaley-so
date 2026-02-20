@@ -374,6 +374,7 @@ export function PromptLibrary({ videoType, title }: PromptLibraryProps) {
               src={imagePreview}
               alt="Preview"
               className="h-24 w-24 rounded-md object-cover"
+              loading="lazy"
             />
             <div className="flex-1">
               <p className="text-xs text-muted-foreground mb-2">
@@ -540,7 +541,7 @@ export function PromptLibrary({ videoType, title }: PromptLibraryProps) {
         </div>
       ) : (
         <div className="grid gap-3">
-          {prompts.map((prompt) => (
+            {prompts.map((prompt) => (
             <div
               key={prompt.id}
               className="flex gap-3 p-3 rounded-lg border bg-card hover:bg-card/50 transition-colors"
@@ -550,6 +551,7 @@ export function PromptLibrary({ videoType, title }: PromptLibraryProps) {
                   src={prompt.preview_image_url}
                   alt="Preview"
                   className="w-20 h-20 rounded-md object-cover flex-shrink-0"
+                  loading="lazy"
                 />
               ) : (
                 <div className="w-20 h-20 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
