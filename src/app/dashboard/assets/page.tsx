@@ -27,7 +27,7 @@ export default async function AssetsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">Asset Library</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Asset Library</h1>
         <p className="text-muted-foreground">
           Upload, organize, and manage your media files.
         </p>

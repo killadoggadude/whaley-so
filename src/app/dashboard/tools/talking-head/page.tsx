@@ -31,7 +31,7 @@ export default async function TalkingHeadPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">Talking Head</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Talking Head</h1>
         <p className="text-muted-foreground">
           Create lip-synced talking head videos from a video transcript, AI
           voice, and portrait image.

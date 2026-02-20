@@ -84,11 +84,8 @@ export default function HowItWorksPage() {
       {/* Hero */}
       <section className="py-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Create Viral Videos in{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">
-              5 Simple Steps
-            </span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">
+            Create Viral Videos in 5 Simple Steps
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             No video editing skills required. Just upload, write, and let AI do the magic.

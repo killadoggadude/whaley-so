@@ -109,7 +109,7 @@ export function GalleryClient({
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">Community Gallery</h1>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Community Gallery</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Discover videos created by our community. Click any video to recreate it with your own twist.
           </p>

@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       {/* Welcome Section */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          <h1 className="text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">
             Welcome back{profile?.name ? `, ${profile.name}` : ""}
           </h1>
           <p className="text-muted-foreground mt-1">

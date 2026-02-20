@@ -112,11 +112,8 @@ export default function FAQPage() {
       {/* Hero */}
       <section className="py-24 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Frequently Asked{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">
-              Questions
-            </span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">
+            Frequently Asked Questions
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Everything you need to know about AI OFM

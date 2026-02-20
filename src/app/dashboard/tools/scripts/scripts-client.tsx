@@ -433,7 +433,7 @@ export function ScriptsClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">Scripts</h1>
+          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Scripts</h1>
           <p className="text-muted-foreground">
             {total} script{total !== 1 ? "s" : ""} in library
           </p>

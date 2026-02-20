@@ -23,7 +23,7 @@ export default async function ModelsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl md:text-6xl font-bold mb-6">Models</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Models</h1>
         <p className="text-muted-foreground">
           Create and manage your AI model profiles.
         </p>
