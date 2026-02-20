@@ -5,19 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Loader2,
   Search,
   FileText,
-  GripVertical,
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -60,7 +59,6 @@ export function ScriptPicker({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
-  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -89,20 +87,6 @@ export function ScriptPicker({
     fetchScripts();
   }, [open, category, search]);
 
-  const handleDragStart = (e: React.DragEvent, script: Script) => {
-    if (usedScriptIds.includes(script.id)) {
-      e.preventDefault();
-      return;
-    }
-    e.dataTransfer.setData("text/plain", JSON.stringify(script));
-    e.dataTransfer.effectAllowed = "copy";
-    setDraggingId(script.id);
-  };
-
-  const handleDragEnd = () => {
-    setDraggingId(null);
-  };
-
   const handleClick = (script: Script) => {
     if (usedScriptIds.includes(script.id)) return;
     onSelect(script);
@@ -116,19 +100,19 @@ export function ScriptPicker({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Script Library
-          </SheetTitle>
-          <SheetDescription>
-            Click or drag a script to use it. Used scripts will be disabled.
-          </SheetDescription>
-        </SheetHeader>
+          </DialogTitle>
+          <DialogDescription>
+            Click on a script to select it. Used scripts are disabled.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="mt-4 space-y-4">
+        <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -157,7 +141,7 @@ export function ScriptPicker({
             </TabsList>
           </Tabs>
 
-          <ScrollArea className="h-[calc(100vh-280px)]">
+          <ScrollArea className="h-[calc(85vh-220px)]">
             {loading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -171,32 +155,19 @@ export function ScriptPicker({
               <div className="space-y-2 pr-4">
                 {scripts.map((script) => {
                   const isUsed = usedScriptIds.includes(script.id);
-                  const isDragging = draggingId === script.id;
 
                   return (
                     <div
                       key={script.id}
-                      draggable={!isUsed}
-                      onDragStart={(e) => handleDragStart(e, script)}
-                      onDragEnd={handleDragEnd}
                       onClick={() => handleClick(script)}
                       className={cn(
-                        "group relative p-3 rounded-lg border bg-card transition-all",
+                        "relative p-3 rounded-lg border bg-card transition-all cursor-pointer",
                         isUsed
                           ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer hover:border-accent-blue hover:bg-card/80",
-                        isDragging && "opacity-50 border-accent-blue"
+                          : "cursor-pointer hover:border-primary/30 hover:bg-card-hover"
                       )}
                     >
                       <div className="flex items-start gap-2">
-                        <GripVertical
-                          className={cn(
-                            "h-4 w-4 mt-0.5 flex-shrink-0",
-                            isUsed
-                              ? "text-muted-foreground/50"
-                              : "text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                          )}
-                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <Badge
@@ -206,30 +177,19 @@ export function ScriptPicker({
                               {script.category}
                             </Badge>
                             {script.is_ai_generated && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0"
-                              >
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                 AI
                               </Badge>
                             )}
                             <span className="text-[10px] text-muted-foreground">
                               {formatDate(script.created_at)}
                             </span>
-                            {isUsed && (
-                              <Badge
-                                variant="outline"
-                                className="text-[10px] px-1.5 py-0 text-green-600 border-green-600"
-                              >
-                                <Check className="h-2.5 w-2.5 mr-0.5" />
-                                Used
-                              </Badge>
-                            )}
                           </div>
-                          <p className="text-sm line-clamp-3">
-                            {script.script_text}
-                          </p>
+                          <p className="text-sm line-clamp-2">{script.script_text}</p>
                         </div>
+                        {isUsed && (
+                          <Check className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        )}
                       </div>
                     </div>
                   );
@@ -238,8 +198,8 @@ export function ScriptPicker({
             )}
           </ScrollArea>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
 
