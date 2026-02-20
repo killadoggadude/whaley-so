@@ -32,6 +32,18 @@ const navItems: NavItem[] = [
     group: "Overview",
   },
   {
+    title: "Viral Reels",
+    href: "/dashboard/viral-reels",
+    icon: Flame,
+    group: "Overview",
+  },
+  {
+    title: "Gallery",
+    href: "/gallery",
+    icon: LayoutGrid,
+    group: "Overview",
+  },
+  {
     title: "Assets",
     href: "/dashboard/assets",
     icon: FolderOpen,
@@ -50,21 +62,9 @@ const navItems: NavItem[] = [
     group: "Library",
   },
   {
-    title: "Gallery",
-    href: "/gallery",
-    icon: LayoutGrid,
-    group: "Library",
-  },
-  {
     title: "Prompts",
     href: "/dashboard/tools/prompts",
     icon: Sparkles,
-    group: "Video Tools",
-  },
-  {
-    title: "Viral Reels",
-    href: "/dashboard/viral-reels",
-    icon: Flame,
     group: "Video Tools",
   },
   {
@@ -104,8 +104,13 @@ export function Sidebar() {
   }));
 
   return (
-    <aside className="w-64 border-r border-border bg-sidebar min-h-[calc(100vh-57px)]">
-      <nav className="flex flex-col gap-1 p-4">
+    <aside className="w-64 border-r border-border bg-sidebar flex flex-col">
+      <div className="p-4 border-b border-border">
+        <Link href="/dashboard" className="block">
+          <img src="/thirst-so-logo.png" alt="thirst.so" className="h-8 w-auto" />
+        </Link>
+      </div>
+      <nav className="flex flex-col gap-1 p-4 flex-1">
         {groupedItems.map(({ group, items }) => (
           <div key={group} className="mb-4 last:mb-0">
             <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wide">
