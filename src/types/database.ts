@@ -107,6 +107,9 @@ export interface Prompt {
   prompt_index: number;
   variation_label: string;
   is_edited: boolean;
+  video_type: 'dancing_reel' | 'talking_head' | null;
+  preview_image_url: string | null;
+  category: 'pose' | 'outfit' | 'background' | 'expression' | 'general' | null;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;

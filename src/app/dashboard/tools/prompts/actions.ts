@@ -49,6 +49,8 @@ export async function savePromptsAction(
 export async function getPromptsAction(filters?: {
   limit?: number;
   offset?: number;
+  video_type?: 'dancing_reel' | 'talking_head' | null;
+  category?: string;
 }): Promise<{
   prompts: PromptWithSourceImage[];
   total: number;
@@ -66,6 +68,18 @@ export async function getPromptsAction(filters?: {
       .from("prompts")
       .select("*", { count: "exact" })
       .eq("user_id", user.id);
+
+    if (filters?.video_type !== undefined) {
+      if (filters.video_type === null) {
+        query = query.is("video_type", null);
+      } else {
+        query = query.eq("video_type", filters.video_type);
+      }
+    }
+
+    if (filters?.category) {
+      query = query.eq("category", filters.category);
+    }
 
     query = query.order("created_at", { ascending: false });
 
@@ -187,6 +201,83 @@ export async function deletePromptAction(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to delete prompt",
+    };
+  }
+}
+
+export async function saveLibraryPromptAction(prompt: {
+  prompt_text: string;
+  video_type: 'dancing_reel' | 'talking_head';
+  category?: 'pose' | 'outfit' | 'background' | 'expression' | 'general';
+  preview_image_url?: string;
+}): Promise<{ success: boolean; error?: string; id?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const { data, error } = await supabase
+      .from("prompts")
+      .insert({
+        user_id: user.id,
+        prompt_text: prompt.prompt_text,
+        video_type: prompt.video_type,
+        category: prompt.category || 'general',
+        preview_image_url: prompt.preview_image_url || null,
+        prompt_index: 0,
+        variation_label: '',
+      })
+      .select('id')
+      .single();
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/dashboard/tools/prompts");
+    return { success: true, id: data.id };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to save prompt",
+    };
+  }
+}
+
+export async function updateLibraryPromptAction(
+  promptId: string,
+  updates: {
+    prompt_text?: string;
+    category?: 'pose' | 'outfit' | 'background' | 'expression' | 'general';
+    preview_image_url?: string;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { success: false, error: "Not authenticated" };
+
+    const { error } = await supabase
+      .from("prompts")
+      .update({
+        ...updates,
+        is_edited: true,
+      })
+      .eq("id", promptId)
+      .eq("user_id", user.id);
+
+    if (error) return { success: false, error: error.message };
+
+    revalidatePath("/dashboard/tools/prompts");
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update prompt",
     };
   }
 }
