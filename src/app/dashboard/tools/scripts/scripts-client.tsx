@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,9 @@ import {
   FileText,
   X,
   ThumbsUp,
+  Archive,
+  ArchiveX,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -47,6 +50,8 @@ interface Script {
   created_at: string;
   upvotes_count?: number;
   has_upvoted?: boolean;
+  is_archived?: boolean;
+  archived_at?: string;
 }
 
 interface ScriptsClientProps {
@@ -60,10 +65,16 @@ export function ScriptsClient({
 }: ScriptsClientProps) {
   const [scripts, setScripts] = useState<Script[]>(initialScripts);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [status, setStatus] = useState<"active" | "archived">("active");
   const [total, setTotal] = useState(initialScripts.length);
   const [upvoting, setUpvoting] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState<string | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const hasMoreRef = useRef(true);
 
   // New script dialog
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -84,31 +95,69 @@ export function ScriptsClient({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Fetch scripts
-  const fetchScripts = useCallback(async () => {
-    setLoading(true);
+  const fetchScripts = useCallback(async (isLoadMore = false) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      offsetRef.current = 0;
+      hasMoreRef.current = true;
+    }
+    
     try {
       const params = new URLSearchParams();
       if (category !== "all") params.set("category", category);
       if (search) params.set("search", search);
+      params.set("status", status);
       params.set("limit", "50");
+      params.set("offset", offsetRef.current.toString());
 
       const res = await fetch(`/api/scripts/list?${params}`);
       const data = await res.json();
 
       if (res.ok) {
-        setScripts(data.scripts);
+        if (isLoadMore) {
+          setScripts((prev) => [...prev, ...data.scripts]);
+        } else {
+          setScripts(data.scripts);
+        }
         setTotal(data.total);
+        hasMoreRef.current = data.scripts.length === 50;
+        offsetRef.current += data.scripts.length;
       }
     } catch (error) {
       console.error("Fetch scripts error:", error);
     } finally {
-      setLoading(false);
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
-  }, [category, search]);
+  }, [category, search, status]);
 
+  // Initial load and filter changes
   useEffect(() => {
     fetchScripts();
   }, [fetchScripts]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore && hasMoreRef.current && !loading) {
+          fetchScripts(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [loadingMore, loading, fetchScripts]);
 
   // Upvote script
   const handleUpvote = async (scriptId: string) => {
@@ -136,6 +185,30 @@ export function ScriptsClient({
       console.error("Upvote error:", error);
     } finally {
       setUpvoting(null);
+    }
+  };
+
+  // Archive/Unarchive script
+  const handleArchive = async (scriptId: string, archive: boolean) => {
+    setArchiving(scriptId);
+    try {
+      const endpoint = archive ? "/api/scripts/archive" : "/api/scripts/unarchive";
+      const res = await fetch(`${endpoint}?script_id=${scriptId}`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        if (archive) {
+          toast.success("Script marked as used");
+        } else {
+          toast.success("Script restored");
+        }
+        fetchScripts();
+      }
+    } catch (error) {
+      console.error("Archive error:", error);
+    } finally {
+      setArchiving(null);
     }
   };
 
@@ -378,29 +451,46 @@ export function ScriptsClient({
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search scripts..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Tabs
-          value={category}
-          onValueChange={setCategory}
-          className="w-full sm:w-auto"
-        >
-          <TabsList className="w-full sm:w-auto flex flex-wrap">
-            {categories.map((cat) => (
-              <TabsTrigger key={cat.value} value={cat.value}>
-                {cat.label}
-              </TabsTrigger>
-            ))}
+      <div className="flex flex-col gap-4">
+        {/* Status Tabs */}
+        <Tabs value={status} onValueChange={(v) => setStatus(v as "active" | "archived")}>
+          <TabsList>
+            <TabsTrigger value="active">
+              <FileText className="h-4 w-4 mr-2" />
+              Active
+            </TabsTrigger>
+            <TabsTrigger value="archived">
+              <Archive className="h-4 w-4 mr-2" />
+              Used
+            </TabsTrigger>
           </TabsList>
         </Tabs>
+
+        {/* Search and Category */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search scripts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Tabs
+            value={category}
+            onValueChange={setCategory}
+            className="w-full sm:w-auto"
+          >
+            <TabsList className="w-full sm:w-auto flex flex-wrap">
+              {categories.map((cat) => (
+                <TabsTrigger key={cat.value} value={cat.value}>
+                  {cat.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       {/* Scripts Grid */}
@@ -419,16 +509,22 @@ export function ScriptsClient({
           {scripts.map((script) => (
             <div
               key={script.id}
-              className="flex items-start justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-card/50 transition-colors"
+              className="flex items-start justify-between gap-4 p-4 rounded-lg border bg-card hover:bg-card-hover hover:border-primary/30 hover:shadow-lg transition-all duration-200 card-hover"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <Badge variant="secondary" className="text-xs">
                     {script.category}
                   </Badge>
                   {script.is_ai_generated && (
                     <Badge variant="outline" className="text-xs">
                       AI
+                    </Badge>
+                  )}
+                  {script.is_archived && (
+                    <Badge variant="default" className="text-xs bg-primary/10 text-primary border border-primary/20">
+                      <Video className="h-3 w-3 mr-1" />
+                      Used in video
                     </Badge>
                   )}
                   <span className="text-xs text-muted-foreground">
@@ -438,18 +534,31 @@ export function ScriptsClient({
                 <p className="text-sm">{script.script_text}</p>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "h-8 w-8",
-                    script.has_upvoted && "text-primary"
-                  )}
-                  onClick={() => handleUpvote(script.id)}
-                  disabled={upvoting === script.id}
-                >
-                  <ThumbsUp className={cn("h-4 w-4", script.has_upvoted && "fill-current")} />
-                </Button>
+                {script.is_archived ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleArchive(script.id, false)}
+                    disabled={archiving === script.id}
+                    title="Restore script"
+                  >
+                    <ArchiveX className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8",
+                      script.has_upvoted && "text-primary"
+                    )}
+                    onClick={() => handleUpvote(script.id)}
+                    disabled={upvoting === script.id}
+                  >
+                    <ThumbsUp className={cn("h-4 w-4", script.has_upvoted && "fill-current")} />
+                  </Button>
+                )}
                 {(script.upvotes_count || 0) > 0 && (
                   <span className="text-xs text-muted-foreground min-w-[20px] text-center">
                     {script.upvotes_count}
@@ -477,6 +586,14 @@ export function ScriptsClient({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Infinite scroll trigger */}
+      <div ref={loadMoreRef} className="h-4" />
+      {loadingMore && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       )}
 

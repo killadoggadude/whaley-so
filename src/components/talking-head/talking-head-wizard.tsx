@@ -46,6 +46,7 @@ export function TalkingHeadWizard({ aiModels, prefillVideoUrl }: TalkingHeadWiza
   const [videoUrl, setVideoUrl] = useState(prefillVideoUrl || "");
   const [transcript, setTranscript] = useState("");
   const [editedScript, setEditedScript] = useState("");
+  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] =
     useState<AiModelWithImages | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -196,6 +197,7 @@ export function TalkingHeadWizard({ aiModels, prefillVideoUrl }: TalkingHeadWiza
           <StepScriptEdit
             script={editedScript}
             onScriptChange={setEditedScript}
+            onScriptIdChange={setSelectedScriptId}
           />
         )}
         {step === 4 && (
@@ -228,6 +230,7 @@ export function TalkingHeadWizard({ aiModels, prefillVideoUrl }: TalkingHeadWiza
             selectedImageUrl={selectedImageUrl!}
             audioUrl={audioUrl!}
             script={editedScript}
+            scriptId={selectedScriptId}
             onVideoReady={(url, captionedUrl, captAssetId) => {
               setGeneratedVideoUrl(url);
               if (captionedUrl) setCaptionedVideoUrl(captionedUrl);

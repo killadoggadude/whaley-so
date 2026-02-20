@@ -33,6 +33,7 @@ interface StepVideoGenProps {
   selectedImageUrl: string;
   audioUrl: string;
   script: string;
+  scriptId?: string | null;
   onVideoReady: (videoUrl: string, captionedVideoUrl?: string, captionedAssetId?: string) => void;
 }
 
@@ -54,6 +55,7 @@ export function StepVideoGen({
   selectedImageUrl,
   audioUrl,
   script,
+  scriptId,
   onVideoReady,
 }: StepVideoGenProps) {
   const [resolution, setResolution] = useState("480p");
@@ -71,6 +73,13 @@ export function StepVideoGen({
 
   // Cost estimation
   const [audioDuration, setAudioDuration] = useState<number | null>(null);
+
+  // Archive script when video is completed
+  useEffect(() => {
+    if (state === "completed" && scriptId) {
+      fetch(`/api/scripts/archive?script_id=${scriptId}`, { method: "POST" }).catch(console.error);
+    }
+  }, [state, scriptId]);
 
   // Calculate audio duration
   useEffect(() => {

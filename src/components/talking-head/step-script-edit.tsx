@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 interface StepScriptEditProps {
   script: string;
   onScriptChange: (script: string) => void;
+  onScriptIdChange?: (scriptId: string | null) => void;
 }
 
 function countWords(text: string): number {
@@ -24,6 +25,7 @@ function countWords(text: string): number {
 export function StepScriptEdit({
   script,
   onScriptChange,
+  onScriptIdChange,
 }: StepScriptEditProps) {
   const wordCount = countWords(script);
   const charCount = script.length;
@@ -34,6 +36,7 @@ export function StepScriptEdit({
 
   const handleScriptSelect = (selectedScript: Script) => {
     onScriptChange(selectedScript.script_text);
+    onScriptIdChange?.(selectedScript.id);
     setUsedScriptIds((prev) => [...prev, selectedScript.id]);
     setScriptPickerOpen(false);
   };
@@ -55,6 +58,7 @@ export function StepScriptEdit({
       const droppedScript = JSON.parse(e.dataTransfer.getData("text/plain")) as Script;
       if (usedScriptIds.includes(droppedScript.id)) return;
       onScriptChange(droppedScript.script_text);
+      onScriptIdChange?.(droppedScript.id);
       setUsedScriptIds((prev) => [...prev, droppedScript.id]);
     } catch {
       // Not a valid script drop

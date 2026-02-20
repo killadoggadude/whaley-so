@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
     const search = searchParams.get("search");
+    const status = searchParams.get("status") || "active";
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
@@ -26,6 +27,13 @@ export async function GET(request: Request) {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (status === "active") {
+      query = query.eq("is_archived", false);
+    } else if (status === "archived") {
+      query = query.eq("is_archived", true);
+    }
+    // "all" returns everything
 
     if (category && category !== "all") {
       query = query.eq("category", category);
