@@ -16,87 +16,120 @@ import {
   FileText,
 } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  title: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  group?: string;
+}
+
+const navItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    group: "Overview",
   },
   {
     title: "Assets",
     href: "/dashboard/assets",
     icon: FolderOpen,
+    group: "Library",
   },
   {
     title: "Models",
     href: "/dashboard/models",
     icon: UserCircle,
-  },
-  {
-    title: "Prompts",
-    href: "/dashboard/tools/prompts",
-    icon: Sparkles,
-  },
-  {
-    title: "Viral Reels",
-    href: "/dashboard/viral-reels",
-    icon: Flame,
-  },
-  {
-    title: "Talking Head",
-    href: "/dashboard/tools/talking-head",
-    icon: Video,
-  },
-  {
-    title: "Dancing Reel",
-    href: "/dashboard/tools/dancing-reel",
-    icon: Music,
-  },
-  {
-    title: "Motion Control",
-    href: "/dashboard/tools/motion-control",
-    icon: Clapperboard,
+    group: "Library",
   },
   {
     title: "Scripts",
     href: "/dashboard/tools/scripts",
     icon: FileText,
+    group: "Library",
+  },
+  {
+    title: "Prompts",
+    href: "/dashboard/tools/prompts",
+    icon: Sparkles,
+    group: "Video Tools",
+  },
+  {
+    title: "Viral Reels",
+    href: "/dashboard/viral-reels",
+    icon: Flame,
+    group: "Video Tools",
+  },
+  {
+    title: "Talking Head",
+    href: "/dashboard/tools/talking-head",
+    icon: Video,
+    group: "Video Tools",
+  },
+  {
+    title: "Dancing Reel",
+    href: "/dashboard/tools/dancing-reel",
+    icon: Music,
+    group: "Video Tools",
+  },
+  {
+    title: "Motion Control",
+    href: "/dashboard/tools/motion-control",
+    icon: Clapperboard,
+    group: "Video Tools",
   },
   {
     title: "Settings",
     href: "/dashboard/settings",
     icon: Settings,
+    group: "System",
   },
 ];
+
+const groupOrder = ["Overview", "Library", "Video Tools", "System"];
 
 export function Sidebar() {
   const pathname = usePathname();
 
+  const groupedItems = groupOrder.map((group) => ({
+    group,
+    items: navItems.filter((item) => item.group === group),
+  }));
+
   return (
     <aside className="w-64 border-r border-border bg-sidebar min-h-[calc(100vh-57px)]">
       <nav className="flex flex-col gap-1 p-4">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+        {groupedItems.map(({ group, items }) => (
+          <div key={group} className="mb-4 last:mb-0">
+            <h3 className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground tracking-wide">
+              {group}
+            </h3>
+            <div className="flex flex-col gap-0.5">
+              {items.map((item) => {
+                const isActive =
+                  item.href === "/dashboard"
+                    ? pathname === "/dashboard"
+                    : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-primary font-medium"
-                  : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.title}
-            </Link>
-          );
-        })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-primary font-medium"
+                        : "text-sidebar-foreground hover:text-foreground hover:bg-sidebar-accent"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.title}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
     </aside>
   );
