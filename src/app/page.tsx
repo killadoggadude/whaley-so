@@ -343,20 +343,34 @@ export default function HomePage() {
             </div>
             
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <Link href="/about" className="hover:text-foreground transition-colors">
+                About
+              </Link>
+              <Link href="/how-it-works" className="hover:text-foreground transition-colors">
+                How it Works
+              </Link>
+              <Link href="/pricing" className="hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+              <Link href="/faq" className="hover:text-foreground transition-colors">
+                FAQ
+              </Link>
+              <Link href="/contact" className="hover:text-foreground transition-colors">
+                Contact
+              </Link>
+            </div>
+          </div>
+          
+          <div className="mt-8 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+            <div>© {new Date().getFullYear()} AI OFM. All rights reserved.</div>
+            <div className="flex items-center gap-4">
               <Link href="/gallery" className="hover:text-foreground transition-colors">
                 Community Gallery
               </Link>
               <Link href="/login" className="hover:text-foreground transition-colors">
                 Sign In
               </Link>
-              <Link href="/signup" className="hover:text-foreground transition-colors">
-                Get Started
-              </Link>
             </div>
-          </div>
-          
-          <div className="mt-8 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} thirst.so. All rights reserved.
           </div>
         </div>
       </footer>
