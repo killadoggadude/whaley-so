@@ -28,7 +28,7 @@ export default async function ViralReelsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Viral Reels</h1>
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">Viral Reels</h1>
         <p className="text-muted-foreground">
           {isAdmin
             ? "Manage the curated library of viral reels for your users."

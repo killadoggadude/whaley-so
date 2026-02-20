@@ -24,7 +24,7 @@ export default async function PromptsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Image Prompts</h1>
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">Image Prompts</h1>
         <p className="text-muted-foreground">
           Upload an inspiration image and Claude will analyze it to generate a
           detailed prompt for recreating the scene.

@@ -24,7 +24,7 @@ export default async function DancingReelPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dancing Reel</h1>
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">Dancing Reel</h1>
         <p className="text-muted-foreground">
           Animate a static image into a dancing video using Kling 2.6 Pro.
           Upload a portrait image (ideally 9:16) and generate a 5 or 10 second

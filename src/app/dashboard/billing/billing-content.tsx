@@ -125,7 +125,7 @@ export function BillingContent({ user, modelsCount }: BillingContentProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Billing</h1>
+        <h1 className="text-4xl md:text-6xl font-bold mb-6">Billing</h1>
         <p className="text-muted-foreground">
           Manage your subscription and usage
         </p>
