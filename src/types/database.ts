@@ -1,11 +1,22 @@
-export type SubscriptionTier = "free" | "basic" | "pro" | "enterprise";
+export type SubscriptionTier = "free" | "starter" | "pro" | "agency";
+export type SubscriptionStatus = "trial" | "active" | "cancelled" | "past_due";
 export type ApiService = "elevenlabs" | "higgsfield" | "wavespeed" | "anthropic" | "openai" | "google";
 
 export interface UserProfile {
   id: string;
   email: string;
   name: string | null;
+  username: string | null;
+  bio: string | null;
+  avatar_url: string | null;
   subscription_tier: SubscriptionTier;
+  subscription_status: SubscriptionStatus;
+  trial_end_date: string | null;
+  monthly_reel_limit: number;
+  models_limit: number;
+  current_reels_used: number;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }

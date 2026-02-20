@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ScriptsClient } from "./scripts-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Scripts | AI OFM",
   description: "Manage your video scripts for talking head reels",

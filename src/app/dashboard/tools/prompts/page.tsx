@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { PromptGenerator } from "@/components/prompts/prompt-generator";
 import { getPromptsAction } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Image Prompts | AI OFM",
   description:
@@ -20,7 +22,7 @@ export default async function PromptsPage() {
   const promptsResult = await getPromptsAction({ limit: 50 });
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Image Prompts</h1>
         <p className="text-muted-foreground">

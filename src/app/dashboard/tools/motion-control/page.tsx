@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { MotionControlWorkflow } from "@/components/motion-control/motion-control-workflow";
 import { getModelsAction } from "@/app/dashboard/models/actions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Motion Control | AI OFM",
   description:

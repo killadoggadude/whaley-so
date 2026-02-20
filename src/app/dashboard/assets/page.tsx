@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { AssetLibrary } from "@/components/assets/asset-library";
 import { getAssetsAction, getUserTagsAction, getModelsListAction } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Assets | AI OFM",
   description: "Upload and manage your media assets",

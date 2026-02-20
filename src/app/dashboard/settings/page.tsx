@@ -4,6 +4,8 @@ import { ThreadsConnectionCard } from "@/components/settings/threads-connection-
 import { getThreadsAccountsAction } from "@/app/dashboard/settings/threads-actions";
 import type { ApiService } from "@/types";
 
+export const dynamic = "force-dynamic";
+
 const SERVICES: ApiService[] = ["elevenlabs", "higgsfield", "wavespeed", "anthropic", "openai", "google"];
 
 export default async function SettingsPage() {

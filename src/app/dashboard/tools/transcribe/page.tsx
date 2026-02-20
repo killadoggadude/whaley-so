@@ -2,6 +2,8 @@ import { TranscribeForm } from "@/components/tools/transcribe-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InfoIcon } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function TranscribePage() {
   return (
     <div>

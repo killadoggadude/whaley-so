@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { CuratedReelsLibrary } from "@/components/viral-reels/curated-reels-library";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Viral Reels | thirst.so",
   description: "Discover viral reels to recreate for your content",

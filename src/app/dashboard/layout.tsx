@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/layout/user-menu";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -18,12 +19,10 @@ import {
   LayoutGrid,
   Menu,
   X,
-  LogOut,
   Settings,
-  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import type { UserProfile } from "@/types/database";
 
 const navItems = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -47,8 +46,38 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+          
+          if (profile) {
+            setUserProfile({
+              ...profile,
+              email: user.email || "",
+            } as UserProfile);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [supabase]);
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -95,27 +124,12 @@ export default function DashboardLayout({
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
 
-            {/* Settings */}
-            <Button variant="ghost" size="icon" asChild className="hidden md:flex">
-              <Link href="/dashboard/settings">
-                <Settings className="h-4 w-4" />
-              </Link>
-            </Button>
-
-            {/* Sign Out */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden md:flex text-muted-foreground"
-              onClick={async () => {
-                const supabase = createClient();
-                await supabase.auth.signOut();
-                window.location.href = "/login";
-              }}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            {/* User Menu or Loading */}
+            {!loading && userProfile ? (
+              <UserMenu user={userProfile} />
+            ) : (
+              <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+            )}
           </div>
         </div>
 
@@ -165,17 +179,22 @@ export default function DashboardLayout({
                 <Settings className="h-4 w-4" />
                 Settings
               </Link>
-              <button
-                onClick={async () => {
-                  const supabase = createClient();
-                  await supabase.auth.signOut();
-                  window.location.href = "/login";
-                }}
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-left"
+              <Link
+                href="/dashboard/billing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
+                <span className="h-4 w-4" />
+                Billing
+              </Link>
+              <Link
+                href="/dashboard/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <UserCircle className="h-4 w-4" />
+                Profile
+              </Link>
             </nav>
           </div>
         )}

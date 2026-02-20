@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { TalkingHeadTabs } from "@/components/talking-head/talking-head-tabs";
 import { getModelsAction } from "@/app/dashboard/models/actions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Talking Head | AI OFM",
   description: "Create lip-synced talking head videos from your models",

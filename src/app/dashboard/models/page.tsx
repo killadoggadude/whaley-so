@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ModelList } from "@/components/models/model-list";
 import { getModelsAction } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Models | AI OFM",
   description: "Create and manage your AI model profiles",

@@ -1,5 +1,7 @@
 import { TtsForm } from "@/components/tools/tts-form";
 
+export const dynamic = "force-dynamic";
+
 export default function TtsPage() {
   return (
     <div>

@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { DancingReelTabs } from "@/components/dancing-reel/dancing-reel-tabs";
 import { getModelsAction } from "@/app/dashboard/models/actions";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Dancing Reel | AI OFM",
   description: "Create dancing reel videos from your model images using Kling 2.6 Pro",
