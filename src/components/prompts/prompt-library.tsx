@@ -162,7 +162,20 @@ export function PromptLibrary({ videoType, title }: PromptLibraryProps) {
     setAnalyzingState(true);
     try {
       let base64 = imagePreview;
-      if (base64.startsWith("data:")) {
+
+      if (imagePreview.startsWith("http")) {
+        const res = await fetch(imagePreview);
+        const blob = await res.blob();
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const dataUrl = reader.result as string;
+            resolve(dataUrl.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } else if (base64.startsWith("data:")) {
         base64 = base64.split(",")[1];
       }
 
