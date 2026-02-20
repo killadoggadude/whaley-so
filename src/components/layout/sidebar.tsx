@@ -14,6 +14,7 @@ import {
   Music,
   Clapperboard,
   FileText,
+  LayoutGrid,
 } from "lucide-react";
 
 interface NavItem {
@@ -46,6 +47,12 @@ const navItems: NavItem[] = [
     title: "Scripts",
     href: "/dashboard/tools/scripts",
     icon: FileText,
+    group: "Library",
+  },
+  {
+    title: "Gallery",
+    href: "/gallery",
+    icon: LayoutGrid,
     group: "Library",
   },
   {
