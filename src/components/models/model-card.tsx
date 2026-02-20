@@ -34,7 +34,7 @@ export function ModelCard({
 
   return (
     <Card
-      className="cursor-pointer overflow-hidden"
+      className="cursor-pointer overflow-hidden border border-border bg-card hover:bg-card-hover hover:border-primary/30 transition-all duration-200"
       onClick={() => onEdit(model)}
     >
       <CardHeader className="p-0">
