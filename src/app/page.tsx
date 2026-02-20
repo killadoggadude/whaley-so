@@ -96,7 +96,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <img src="/thirst-so-logo.png" alt="thirst.so" className="h-8 w-auto" />
+          <img src="/thirst-so-logo.png" alt="thirst.so" className="h-10 w-auto" />
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Sign In</Link>
@@ -333,7 +333,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <img src="/thirst-so-logo.png" alt="thirst.so" className="h-6 w-auto" />
+              <img src="/thirst-so-logo.png" alt="thirst.so" className="h-10 w-auto" />
               <span className="text-sm text-muted-foreground">
                 AI-powered content creation for creators.
               </span>
