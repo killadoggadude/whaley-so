@@ -15,7 +15,7 @@ export default async function SettingsPage() {
   const keyMap = new Map(maskedKeys.map((k) => [k.service, k]));
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Settings</h2>
         <p className="text-muted-foreground mb-6">
