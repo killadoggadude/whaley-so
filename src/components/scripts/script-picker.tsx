@@ -28,6 +28,8 @@ interface Script {
   category: string;
   is_ai_generated: boolean;
   created_at: string;
+  upvotes_count?: number;
+  has_upvoted?: boolean;
 }
 
 interface ScriptPickerProps {

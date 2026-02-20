@@ -13,10 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-function Command({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive>) {
+function Command({ className, ...props }: any) {
   return (
     <CommandPrimitive
       data-slot="command"
@@ -36,12 +33,7 @@ function CommandDialog({
   className,
   showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof Dialog> & {
-  title?: string
-  description?: string
-  className?: string
-  showCloseButton?: boolean
-}) {
+}: any) {
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
@@ -63,7 +55,7 @@ function CommandDialog({
 function CommandInput({
   className,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+}: any) {
   return (
     <div
       data-slot="command-input-wrapper"
@@ -85,7 +77,7 @@ function CommandInput({
 function CommandList({
   className,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
+}: any) {
   return (
     <CommandPrimitive.List
       data-slot="command-list"
@@ -100,7 +92,7 @@ function CommandList({
 
 function CommandEmpty({
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Empty>) {
+}: any) {
   return (
     <CommandPrimitive.Empty
       data-slot="command-empty"
@@ -113,7 +105,7 @@ function CommandEmpty({
 function CommandGroup({
   className,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Group>) {
+}: any) {
   return (
     <CommandPrimitive.Group
       data-slot="command-group"
@@ -129,7 +121,7 @@ function CommandGroup({
 function CommandSeparator({
   className,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Separator>) {
+}: any) {
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"

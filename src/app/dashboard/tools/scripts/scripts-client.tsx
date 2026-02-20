@@ -33,6 +33,7 @@ import {
   RefreshCw,
   FileText,
   X,
+  ThumbsUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -44,6 +45,8 @@ interface Script {
   category: string;
   is_ai_generated: boolean;
   created_at: string;
+  upvotes_count?: number;
+  has_upvoted?: boolean;
 }
 
 interface ScriptsClientProps {
@@ -60,6 +63,7 @@ export function ScriptsClient({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [total, setTotal] = useState(initialScripts.length);
+  const [upvoting, setUpvoting] = useState<string | null>(null);
 
   // New script dialog
   const [showNewDialog, setShowNewDialog] = useState(false);
@@ -105,6 +109,35 @@ export function ScriptsClient({
   useEffect(() => {
     fetchScripts();
   }, [fetchScripts]);
+
+  // Upvote script
+  const handleUpvote = async (scriptId: string) => {
+    setUpvoting(scriptId);
+    try {
+      const res = await fetch(`/api/scripts/upvote?script_id=${scriptId}`, {
+        method: "POST",
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setScripts((prev) =>
+          prev.map((s) =>
+            s.id === scriptId
+              ? {
+                  ...s,
+                  has_upvoted: data.upvoted,
+                  upvotes_count: (s.upvotes_count || 0) + (data.upvoted ? 1 : -1),
+                }
+              : s
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Upvote error:", error);
+    } finally {
+      setUpvoting(null);
+    }
+  };
 
   // Humanize text
   const handleHumanize = async () => {
@@ -184,8 +217,8 @@ export function ScriptsClient({
 
   // Generate scripts with AI
   const handleGenerate = async () => {
-    if (!generatePrompt.trim() && scripts.length === 0) {
-      toast.error("Add reference scripts or a prompt");
+    if (!generatePrompt.trim()) {
+      toast.error("Add a prompt to generate scripts");
       return;
     }
 
@@ -405,6 +438,23 @@ export function ScriptsClient({
                 <p className="text-sm">{script.script_text}</p>
               </div>
               <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "h-8 w-8",
+                    script.has_upvoted && "text-primary"
+                  )}
+                  onClick={() => handleUpvote(script.id)}
+                  disabled={upvoting === script.id}
+                >
+                  <ThumbsUp className={cn("h-4 w-4", script.has_upvoted && "fill-current")} />
+                </Button>
+                {(script.upvotes_count || 0) > 0 && (
+                  <span className="text-xs text-muted-foreground min-w-[20px] text-center">
+                    {script.upvotes_count}
+                  </span>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"

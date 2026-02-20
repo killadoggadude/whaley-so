@@ -62,7 +62,7 @@ export default function DashboardLayout({
         <div className="flex items-center justify-between h-14 px-4">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-3">
-            <img src="/thirst-so-logo.png" alt="thirst.so" className="h-7 w-auto" />
+            <img src="/thirst-so-logo.png" alt="thirst.so" className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}
