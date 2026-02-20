@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h2 className="text-2xl font-bold mb-2">Settings</h2>
+        <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Settings</h2>
         <p className="text-muted-foreground mb-6">
           Manage your API keys and connected accounts. Keys are encrypted before
           storage.

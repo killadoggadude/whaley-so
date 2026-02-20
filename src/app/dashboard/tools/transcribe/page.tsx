@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default function TranscribePage() {
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-2">Video Transcription</h2>
+      <h2 className="text-2xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-500">Video Transcription</h2>
       <p className="text-muted-foreground mb-4">
         Transcribe videos from Instagram, TikTok, and YouTube using Wavespeed
         Whisper. Requires a Wavespeed API key in Settings.
