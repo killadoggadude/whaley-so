@@ -33,6 +33,9 @@ import {
   RefreshCw,
   Info,
   FileText,
+  Shuffle,
+  Users,
+  Heart,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { CaptionCustomizerInline } from "./caption-customizer";
@@ -44,6 +47,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { WordTimestamp } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -148,6 +157,7 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const [scriptPickerJobId, setScriptPickerJobId] = useState<string | null>(null);
   const [usedScriptIds, setUsedScriptIds] = useState<string[]>([]);
   const [scriptDragOverJobId, setScriptDragOverJobId] = useState<string | null>(null);
+  const [populatingScripts, setPopulatingScripts] = useState(false);
 
   const selectedModel = voiceModels.find((m) => m.id === selectedModelId) || null;
 
@@ -205,6 +215,41 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
   const openScriptPicker = (jobId: string) => {
     setScriptPickerJobId(jobId);
     setScriptPickerOpen(true);
+  };
+
+  const handlePopulateAllScripts = async (source: 'favorites' | 'community') => {
+    if (jobs.length === 0) return;
+    
+    setPopulatingScripts(true);
+    try {
+      const params = new URLSearchParams();
+      params.set('source', source);
+      params.set('category', 'all');
+      params.set('count', jobs.length.toString());
+
+      const res = await fetch(`/api/scripts/random?${params}`);
+      const data = await res.json();
+
+      if (res.ok && data.scripts?.length > 0) {
+        // Shuffle the scripts
+        const shuffled = [...data.scripts].sort(() => Math.random() - 0.5);
+        
+        // Assign to jobs
+        setJobs(prev => prev.map((job, idx) => ({
+          ...job,
+          script: shuffled[idx]?.script_text || ''
+        })));
+        
+        toast.success(`Populated ${Math.min(data.scripts.length, jobs.length)} scripts`);
+      } else {
+        toast.warning('No scripts available to populate');
+      }
+    } catch (error) {
+      console.error('Populate scripts error:', error);
+      toast.error('Failed to populate scripts');
+    } finally {
+      setPopulatingScripts(false);
+    }
   };
 
   const fetchPickerImages = useCallback(async (append: boolean) => {
@@ -1052,10 +1097,34 @@ export function BulkTalkingHead({ aiModels }: BulkTalkingHeadProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-base">Videos ({jobs.length})</Label>
-            <Button variant="outline" size="sm" onClick={addJob} disabled={running}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add Video
-            </Button>
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={running || populatingScripts || jobs.length === 0}>
+                    {populatingScripts ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <Shuffle className="h-4 w-4 mr-1.5" />
+                    )}
+                    Populate All
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={() => handlePopulateAllScripts('favorites')}>
+                    <Heart className="h-4 w-4 mr-2" />
+                    From My Favorites
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePopulateAllScripts('community')}>
+                    <Users className="h-4 w-4 mr-2" />
+                    From Community
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button variant="outline" size="sm" onClick={addJob} disabled={running}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Video
+              </Button>
+            </div>
           </div>
 
         {jobs.map((job, idx) => (
