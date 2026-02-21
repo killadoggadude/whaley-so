@@ -51,9 +51,9 @@ export async function POST(request: Request) {
       count?: number;
     };
 
-    if (!prompt && (!referenceScripts || referenceScripts.length === 0)) {
+    if (!prompt) {
       return NextResponse.json(
-        { error: "Either prompt or referenceScripts is required" },
+        { error: "A prompt is required to generate scripts" },
         { status: 400 }
       );
     }
