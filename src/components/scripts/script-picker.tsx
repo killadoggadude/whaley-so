@@ -161,10 +161,8 @@ export function ScriptPicker({
                       key={script.id}
                       onClick={() => handleClick(script)}
                       className={cn(
-                        "relative p-3 rounded-lg border bg-card transition-all cursor-pointer",
-                        isUsed
-                          ? "opacity-50 cursor-not-allowed"
-                          : "cursor-pointer hover:border-primary/30 hover:bg-card-hover"
+                        "relative p-3 rounded-xl border border-border bg-card hover:bg-card-hover hover:border-primary/30 hover:shadow-lg transition-all duration-200 cursor-pointer",
+                        isUsed && "opacity-50 cursor-not-allowed"
                       )}
                     >
                       <div className="flex items-start gap-2">
