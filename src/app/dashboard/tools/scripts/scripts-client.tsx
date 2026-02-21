@@ -603,8 +603,8 @@ export function ScriptsClient({
                     </Badge>
                   )}
                   
-                  {/* User Info for Community/Leaderboard */}
-                  {(scope === "community" || scope === "leaderboard") && script.user_name && (
+                  {/* User Info for Community (shows all scripts including own) */}
+                  {scope === "community" && script.user_name && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       {script.user_avatar_url ? (
                         <img 

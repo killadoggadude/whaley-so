@@ -34,10 +34,8 @@ export async function GET(request: Request) {
     // Filter by scope
     if (scope === "mine") {
       query = query.eq("user_id", user.id);
-    } else if (scope === "community") {
-      query = query.neq("user_id", user.id);
     }
-    // "all" returns everything
+    // "community" and "all" return everything (no filter by user_id)
 
     // Filter by status (archived/active)
     if (status === "active") {
