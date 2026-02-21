@@ -14,14 +14,15 @@ import {
   UserCircle,
   LayoutGrid,
   ArrowRight,
-  Plus,
   Play,
   Eye,
   MessageCircle,
   Wand2,
   Mic,
+  SparklesIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const quickActions = [
   {
@@ -71,7 +72,7 @@ async function getCuratedViralReels() {
     .select("id, url, platform, thumbnail_url, notes, view_count, created_at")
     .eq("is_curated", true)
     .order("created_at", { ascending: false })
-    .limit(6);
+    .limit(4);
   return data || [];
 }
 
@@ -79,11 +80,25 @@ async function getTrendingGallery() {
   const supabase = await createClient();
   const { data } = await supabase
     .from("gallery")
-    .select("id, video_type, thumbnail_url, views, remakes, created_at, user_id")
+    .select("id, video_type, thumbnail_url, script_text, views, remakes, created_at, user_id")
     .eq("is_public", true)
     .order("remakes", { ascending: false })
-    .limit(6);
+    .limit(4);
   return data || [];
+}
+
+function formatViewCount(count: number): string {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return count.toString();
+}
+
+function getViewCountTier(count: number): { label: string; color: string } | null {
+  if (count === 0) return null;
+  if (count >= 1000000) return { label: "1M+", color: "bg-purple-600" };
+  if (count >= 500000) return { label: "500K+", color: "bg-blue-600" };
+  if (count >= 100000) return { label: "100K+", color: "bg-green-600" };
+  return { label: "100K+", color: "bg-yellow-600" };
 }
 
 export default async function DashboardPage() {
@@ -162,54 +177,79 @@ export default async function DashboardPage() {
               View All <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {viralReels.map((reel) => (
-              <Link
-                key={reel.id}
-                href="/dashboard/viral-reels"
-                className="group relative aspect-[9/16] rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-all"
-              >
-                {reel.thumbnail_url ? (
-                  <img
-                    src={reel.thumbnail_url}
-                    alt={reel.notes || "Viral reel"}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <Play className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <p className="text-white text-xs font-medium line-clamp-2">
-                      {reel.notes || "Tap to view"}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-white/70 text-xs capitalize">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {viralReels.map((reel) => {
+              const tier = getViewCountTier(reel.view_count || 0);
+              return (
+                <div
+                  key={reel.id}
+                  className="group relative overflow-hidden rounded-lg bg-card border border-border hover:border-primary/50 transition-all"
+                >
+                  {/* Thumbnail */}
+                  <a
+                    href={reel.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block relative aspect-[9/16] bg-muted"
+                  >
+                    {reel.thumbnail_url ? (
+                      <img
+                        src={reel.thumbnail_url}
+                        alt={reel.notes || "Viral reel"}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Video className="h-12 w-12 text-muted-foreground/30" />
+                      </div>
+                    )}
+
+                    {/* Play button overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                      <div className="rounded-full bg-white/90 p-3 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                        <Play className="h-6 w-6 text-black fill-black" />
+                      </div>
+                    </div>
+
+                    {/* Platform badge */}
+                    <div className="absolute top-2 right-2">
+                      <div className="flex items-center gap-1 rounded-md bg-black/60 backdrop-blur px-2 py-1 text-white text-[10px] capitalize">
                         {reel.platform}
-                      </span>
-                      {reel.view_count > 0 && (
-                        <span className="text-white/70 text-xs flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {reel.view_count >= 1000000
-                            ? `${(reel.view_count / 1000000).toFixed(1)}M`
-                            : reel.view_count >= 1000
-                            ? `${(reel.view_count / 1000).toFixed(1)}K`
-                            : reel.view_count}
-                        </span>
+                      </div>
+                    </div>
+
+                    {/* View count badge */}
+                    <div className="absolute bottom-2 left-2">
+                      {tier ? (
+                        <Badge className={`text-xs backdrop-blur text-white border-none ${tier.color} h-6 px-2`}>
+                          {tier.label}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs bg-gray-600 backdrop-blur text-white border-none h-6 px-2">
+                          {formatViewCount(reel.view_count || 0)} views
+                        </Badge>
                       )}
                     </div>
-                  </div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-                      <Play className="h-5 w-5 text-white fill-white" />
-                    </div>
+                  </a>
+
+                  {/* Info */}
+                  <div className="p-3 space-y-2">
+                    {reel.notes && (
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {reel.notes}
+                      </p>
+                    )}
+                    <Button size="sm" className="w-full" asChild>
+                      <a href={reel.url} target="_blank" rel="noopener noreferrer">
+                        <SparklesIcon className="h-3.5 w-3.5 mr-1" />
+                        Recreate
+                      </a>
+                    </Button>
                   </div>
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -226,48 +266,72 @@ export default async function DashboardPage() {
               View All <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {trendingGallery.map((item) => (
-              <Link
+              <div
                 key={item.id}
-                href={`/gallery?remake=${item.id}`}
-                className="group relative aspect-[9/16] rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-all"
+                className="group relative overflow-hidden rounded-lg bg-card border border-border hover:border-primary/50 transition-all"
               >
-                {item.thumbnail_url ? (
-                  <img
-                    src={item.thumbnail_url}
-                    alt="Gallery video"
-                    className="absolute inset-0 w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                    <Video className="h-8 w-8 text-muted-foreground" />
+                {/* Thumbnail */}
+                <Link
+                  href={`/gallery?remake=${item.id}`}
+                  className="block relative aspect-[9/16] bg-muted"
+                >
+                  {item.thumbnail_url ? (
+                    <img
+                      src={item.thumbnail_url}
+                      alt="Gallery video"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Video className="h-12 w-12 text-muted-foreground/30" />
+                    </div>
+                  )}
+
+                  {/* Play button overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
+                    <div className="rounded-full bg-white/90 p-3 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                      <Play className="h-6 w-6 text-black fill-black" />
+                    </div>
                   </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="absolute bottom-0 left-0 right-0 p-3">
-                    <span className="text-white/70 text-xs capitalize bg-white/20 px-2 py-0.5 rounded">
+
+                  {/* Video type badge */}
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="text-[10px] capitalize bg-white/20 backdrop-blur text-white border-none">
                       {item.video_type?.replace("_", " ")}
+                    </Badge>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-white text-[10px] bg-black/60 backdrop-blur px-1.5 py-0.5 rounded">
+                      <Eye className="h-3 w-3" />
+                      {formatViewCount(item.views || 0)}
                     </span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-white/70 text-xs flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {item.views || 0}
-                      </span>
-                      <span className="text-white/70 text-xs flex items-center gap-1">
-                        <MessageCircle className="h-3 w-3" />
-                        {item.remakes || 0}
-                      </span>
-                    </div>
+                    <span className="flex items-center gap-1 text-white text-[10px] bg-black/60 backdrop-blur px-1.5 py-0.5 rounded">
+                      <MessageCircle className="h-3 w-3" />
+                      {item.remakes || 0}
+                    </span>
                   </div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-                      <Play className="h-5 w-5 text-white fill-white" />
-                    </div>
-                  </div>
+                </Link>
+
+                {/* Info */}
+                <div className="p-3 space-y-2">
+                  {item.script_text && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {item.script_text}
+                    </p>
+                  )}
+                  <Button size="sm" className="w-full" asChild>
+                    <Link href={`/gallery?remake=${item.id}`}>
+                      <SparklesIcon className="h-3.5 w-3.5 mr-1" />
+                      Recreate
+                    </Link>
+                  </Button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </section>
