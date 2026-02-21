@@ -32,23 +32,23 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("tags", JSON.stringify(["avatar"]));
 
-      const { error: uploadError } = await supabase.storage
-        .from("assets")
-        .upload(filePath, file);
+      const res = await fetch("/api/assets/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (uploadError) {
-        throw uploadError;
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Upload failed");
       }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("assets")
-        .getPublicUrl(filePath);
-
-      setAvatarUrl(publicUrl);
+      const data = await res.json();
+      const avatarUrl = data.asset?.signed_url || data.asset?.file_path;
+      setAvatarUrl(avatarUrl);
       toast.success("Avatar uploaded");
     } catch (error) {
       console.error("Upload error:", error);
