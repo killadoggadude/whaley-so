@@ -37,6 +37,10 @@ import {
   Archive,
   ArchiveX,
   Video,
+  Trophy,
+  Medal,
+  Crown,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -52,6 +56,10 @@ interface Script {
   has_upvoted?: boolean;
   is_archived?: boolean;
   archived_at?: string;
+  user_id?: string;
+  user_name?: string;
+  user_avatar_url?: string;
+  rank?: number;
 }
 
 interface ScriptsClientProps {
@@ -69,6 +77,7 @@ export function ScriptsClient({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [status, setStatus] = useState<"active" | "archived">("active");
+  const [scope, setScope] = useState<"mine" | "community" | "leaderboard">("mine");
   const [total, setTotal] = useState(initialScripts.length);
   const [upvoting, setUpvoting] = useState<string | null>(null);
   const [archiving, setArchiving] = useState<string | null>(null);
@@ -96,6 +105,30 @@ export function ScriptsClient({
 
   // Fetch scripts
   const fetchScripts = useCallback(async (isLoadMore = false) => {
+    if (scope === "leaderboard") {
+      // Fetch from leaderboard endpoint
+      setLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("period", "7days");
+        params.set("limit", "20");
+
+        const res = await fetch(`/api/scripts/leaderboard?${params}`);
+        const data = await res.json();
+
+        if (res.ok) {
+          setScripts(data.leaderboard || []);
+          setTotal(data.total || 0);
+          hasMoreRef.current = false;
+        }
+      } catch (error) {
+        console.error("Fetch leaderboard error:", error);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     if (isLoadMore) {
       setLoadingMore(true);
     } else {
@@ -109,6 +142,7 @@ export function ScriptsClient({
       if (category !== "all") params.set("category", category);
       if (search) params.set("search", search);
       params.set("status", status);
+      params.set("scope", scope);
       params.set("limit", "50");
       params.set("offset", offsetRef.current.toString());
 
@@ -134,14 +168,12 @@ export function ScriptsClient({
         setLoading(false);
       }
     }
-  }, [category, search, status]);
+  }, [category, search, status, scope]);
 
   // Initial load and filter changes
   useEffect(() => {
     fetchScripts();
   }, [fetchScripts]);
-
-  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -450,18 +482,43 @@ export function ScriptsClient({
         </div>
       </div>
 
+      {/* Weekly Contest Banner */}
+      <div className="rounded-lg bg-gradient-to-r from-yellow-500/10 via-purple-500/10 to-pink-500/10 border border-yellow-500/20 p-4">
+        <div className="flex items-center gap-3">
+          <Trophy className="h-6 w-6 text-yellow-500" />
+          <div className="flex-1">
+            <p className="font-semibold text-sm">🏆 Weekly Script Contest</p>
+            <p className="text-xs text-muted-foreground">
+              Top script this week wins! Most upvotes in the last 7 days takes the crown.
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setScope("leaderboard")}
+            className="border-yellow-500/50 hover:bg-yellow-500/10"
+          >
+            View Leaderboard
+          </Button>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="flex flex-col gap-4">
-        {/* Status Tabs */}
-        <Tabs value={status} onValueChange={(v) => setStatus(v as "active" | "archived")}>
+        {/* Scope Tabs */}
+        <Tabs value={scope} onValueChange={(v) => setScope(v as "mine" | "community" | "leaderboard")}>
           <TabsList>
-            <TabsTrigger value="active">
+            <TabsTrigger value="mine">
               <FileText className="h-4 w-4 mr-2" />
-              Active
+              My Scripts
             </TabsTrigger>
-            <TabsTrigger value="archived">
-              <Archive className="h-4 w-4 mr-2" />
-              Used
+            <TabsTrigger value="community">
+              <Users className="h-4 w-4 mr-2" />
+              Community
+            </TabsTrigger>
+            <TabsTrigger value="leaderboard">
+              <Trophy className="h-4 w-4 mr-2" />
+              Weekly Leaderboard
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -509,10 +566,30 @@ export function ScriptsClient({
           {scripts.map((script) => (
             <div
               key={script.id}
-              className="flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-card hover:bg-card-hover hover:border-primary/30 hover:shadow-lg transition-all duration-200 card-hover"
+              className={cn(
+                "flex items-start justify-between gap-4 p-4 rounded-xl border border-border bg-card hover:bg-card-hover hover:border-primary/30 hover:shadow-lg transition-all duration-200 card-hover",
+                script.rank && script.rank <= 3 && "border-yellow-500/50 bg-yellow-500/5"
+              )}
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  {/* Leaderboard Rank */}
+                  {scope === "leaderboard" && script.rank && (
+                    <div className="flex items-center gap-1 mr-2">
+                      {script.rank === 1 && <Crown className="h-4 w-4 text-yellow-500" />}
+                      {script.rank === 2 && <Medal className="h-4 w-4 text-gray-400" />}
+                      {script.rank === 3 && <Medal className="h-4 w-4 text-amber-600" />}
+                      <span className={cn(
+                        "text-xs font-bold",
+                        script.rank === 1 && "text-yellow-500",
+                        script.rank === 2 && "text-gray-400",
+                        script.rank === 3 && "text-amber-600"
+                      )}>
+                        #{script.rank}
+                      </span>
+                    </div>
+                  )}
+                  
                   <Badge variant="secondary" className="text-xs">
                     {script.category}
                   </Badge>
@@ -527,6 +604,25 @@ export function ScriptsClient({
                       Used in video
                     </Badge>
                   )}
+                  
+                  {/* User Info for Community/Leaderboard */}
+                  {(scope === "community" || scope === "leaderboard") && script.user_name && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {script.user_avatar_url ? (
+                        <img 
+                          src={script.user_avatar_url} 
+                          alt={script.user_name}
+                          className="h-5 w-5 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center">
+                          <span className="text-[10px]">{script.user_name[0]?.toUpperCase()}</span>
+                        </div>
+                      )}
+                      <span>{script.user_name}</span>
+                    </div>
+                  )}
+                  
                   <span className="text-xs text-muted-foreground">
                     {formatDate(script.created_at)}
                   </span>

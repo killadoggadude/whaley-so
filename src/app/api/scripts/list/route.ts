@@ -18,22 +18,33 @@ export async function GET(request: Request) {
     const category = searchParams.get("category");
     const search = searchParams.get("search");
     const status = searchParams.get("status") || "active";
+    const scope = searchParams.get("scope") || "mine"; // mine | community | all
     const limit = parseInt(searchParams.get("limit") || "50");
     const offset = parseInt(searchParams.get("offset") || "0");
 
     let query = supabase
       .from("scripts")
-      .select("*", { count: "exact" })
-      .eq("user_id", user.id)
+      .select(`
+        *,
+        user:users!inner(id, name, avatar_url, username)
+      `, { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
+    // Filter by scope
+    if (scope === "mine") {
+      query = query.eq("user_id", user.id);
+    } else if (scope === "community") {
+      query = query.neq("user_id", user.id);
+    }
+    // "all" returns everything
+
+    // Filter by status (archived/active)
     if (status === "active") {
       query = query.eq("is_archived", false);
     } else if (status === "archived") {
       query = query.eq("is_archived", true);
     }
-    // "all" returns everything
 
     if (category && category !== "all") {
       query = query.eq("category", category);
@@ -50,8 +61,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Transform user data to flatten
+    const transformedScripts = scripts?.map(script => ({
+      ...script,
+      user_name: script.user?.name || script.user?.username || "Anonymous",
+      user_avatar_url: script.user?.avatar_url,
+    })) || [];
+
     return NextResponse.json({
-      scripts: scripts || [],
+      scripts: transformedScripts,
       total: count || 0,
       limit,
       offset,
