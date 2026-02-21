@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Footer } from "@/components/layout/footer";
 import {
   Dialog,
   DialogContent,
@@ -227,11 +228,7 @@ export function GalleryClient({
         </DialogContent>
       </Dialog>
 
-      <footer className="border-t border-border py-8 mt-12">
-        <div className="max-w-6xl mx-auto px-4 text-center text-sm text-muted-foreground">
-          <p>© {new Date().getFullYear()} thirst.so. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer variant="public" />
     </div>
   );
 }

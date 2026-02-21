@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/components/layout/footer";
 import {
   Video,
   Music,
@@ -332,48 +333,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <img src="/thirst-so-logo.png" alt="thirst.so" className="h-10 w-auto" />
-              <span className="text-sm text-muted-foreground">
-                AI-powered content creation for creators.
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/about" className="hover:text-foreground transition-colors">
-                About
-              </Link>
-              <Link href="/how-it-works" className="hover:text-foreground transition-colors">
-                How it Works
-              </Link>
-              <Link href="/pricing" className="hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-              <Link href="/faq" className="hover:text-foreground transition-colors">
-                FAQ
-              </Link>
-              <Link href="/contact" className="hover:text-foreground transition-colors">
-                Contact
-              </Link>
-            </div>
-          </div>
-          
-          <div className="mt-8 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-            <div>© {new Date().getFullYear()} AI OFM. All rights reserved.</div>
-            <div className="flex items-center gap-4">
-              <Link href="/gallery" className="hover:text-foreground transition-colors">
-                Community Gallery
-              </Link>
-              <Link href="/login" className="hover:text-foreground transition-colors">
-                Sign In
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer variant="public" />
     </div>
   );
 }

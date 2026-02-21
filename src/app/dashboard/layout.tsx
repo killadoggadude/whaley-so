@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "@/components/layout/user-menu";
+import { Footer } from "@/components/layout/footer";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -206,6 +207,9 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer variant="dashboard" />
     </div>
   );
 }

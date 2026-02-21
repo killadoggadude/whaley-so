@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Footer } from "@/components/layout/footer";
 import { ArrowRight, Mail, MessageCircle, Twitter, Instagram, Youtube } from "lucide-react";
 
 export const metadata = {
@@ -182,23 +183,8 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-12 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src="/thirst-so-logo.png" alt="thirst.so" className="h-8 w-auto" />
-          </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/about" className="hover:text-foreground">About</Link>
-            <Link href="/how-it-works" className="hover:text-foreground">How it Works</Link>
-            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
-            <Link href="/faq" className="hover:text-foreground">FAQ</Link>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            © 2026 AI OFM. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <Footer variant="public" />
     </div>
   );
 }
+

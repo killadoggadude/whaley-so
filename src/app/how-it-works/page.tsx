@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Footer } from "@/components/layout/footer";
 import { ArrowRight, Upload, FileText, Sparkles, Play, Share } from "lucide-react";
 
 export const metadata = {
@@ -154,22 +155,7 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-12 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src="/thirst-so-logo.png" alt="thirst.so" className="h-8 w-auto" />
-          </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
-            <Link href="/faq" className="hover:text-foreground">FAQ</Link>
-            <Link href="/contact" className="hover:text-foreground">Contact</Link>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            © 2026 AI OFM. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <Footer variant="public" />
     </div>
   );
 }
