@@ -322,25 +322,23 @@ export function ScriptsClient({
 
   // Generate scripts with AI
   const handleGenerate = async () => {
-    if (!generatePrompt.trim()) {
-      toast.error("Add a prompt to generate scripts");
+    // Prompt is optional if user has scripts with upvotes (API handles this)
+    // but show warning if no prompt and no upvoted scripts
+    const hasUpvotedScripts = scripts.some(s => (s.upvotes_count || 0) > 0);
+    
+    if (!generatePrompt.trim() && !hasUpvotedScripts) {
+      toast.error("Add a prompt or save some scripts first");
       return;
     }
 
     setGenerating(true);
     try {
-      // Get reference scripts from selected category
-      const refScripts = scripts
-        .filter((s) => s.category === selectedCategory)
-        .slice(0, 5)
-        .map((s) => s.script_text);
-
+      // API now fetches top upvoted scripts automatically
       const res = await fetch("/api/scripts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: generatePrompt,
-          referenceScripts: refScripts,
+          prompt: generatePrompt || undefined,
           category: selectedCategory,
           count: 8,
         }),

@@ -63,7 +63,7 @@ export function Footer({ variant = "public" }: FooterProps) {
               </div>
             )}
             <span className="text-xs text-muted-foreground">
-              © {new Date().getFullYear()} AI OFM. All rights reserved.
+              © {new Date().getFullYear()} thirst.so. All rights reserved.
             </span>
           </div>
         </div>

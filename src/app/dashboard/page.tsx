@@ -15,6 +15,11 @@ import {
   LayoutGrid,
   ArrowRight,
   Plus,
+  Play,
+  Eye,
+  MessageCircle,
+  Wand2,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -55,7 +60,31 @@ const libraryItems = [
   { title: "Scripts", href: "/dashboard/tools/scripts", icon: FileText },
   { title: "Prompts", href: "/dashboard/tools/prompts", icon: Sparkles },
   { title: "Gallery", href: "/gallery", icon: LayoutGrid },
+  { title: "Transcribe", href: "/dashboard/tools/transcribe", icon: Mic },
+  { title: "TTS", href: "/dashboard/tools/tts", icon: Wand2 },
 ];
+
+async function getCuratedViralReels() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("viral_reels")
+    .select("id, url, platform, thumbnail_url, notes, view_count, created_at")
+    .eq("is_curated", true)
+    .order("created_at", { ascending: false })
+    .limit(6);
+  return data || [];
+}
+
+async function getTrendingGallery() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("gallery")
+    .select("id, video_type, thumbnail_url, views, remakes, created_at, user_id")
+    .eq("is_public", true)
+    .order("remakes", { ascending: false })
+    .limit(6);
+  return data || [];
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -68,6 +97,11 @@ export default async function DashboardPage() {
     .select("*")
     .eq("id", user!.id)
     .single();
+
+  const [viralReels, trendingGallery] = await Promise.all([
+    getCuratedViralReels(),
+    getTrendingGallery(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -116,10 +150,133 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      {/* Viral Reels Section */}
+      {viralReels.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Viral This Week</h2>
+            <Link
+              href="/dashboard/viral-reels"
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              View All <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {viralReels.map((reel) => (
+              <Link
+                key={reel.id}
+                href="/dashboard/viral-reels"
+                className="group relative aspect-[9/16] rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-all"
+              >
+                {reel.thumbnail_url ? (
+                  <img
+                    src={reel.thumbnail_url}
+                    alt={reel.notes || "Viral reel"}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <Play className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <p className="text-white text-xs font-medium line-clamp-2">
+                      {reel.notes || "Tap to view"}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-white/70 text-xs capitalize">
+                        {reel.platform}
+                      </span>
+                      {reel.view_count > 0 && (
+                        <span className="text-white/70 text-xs flex items-center gap-1">
+                          <Eye className="h-3 w-3" />
+                          {reel.view_count >= 1000000
+                            ? `${(reel.view_count / 1000000).toFixed(1)}M`
+                            : reel.view_count >= 1000
+                            ? `${(reel.view_count / 1000).toFixed(1)}K`
+                            : reel.view_count}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+                      <Play className="h-5 w-5 text-white fill-white" />
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Community Gallery Section */}
+      {trendingGallery.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Trending from Community</h2>
+            <Link
+              href="/gallery"
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              View All <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {trendingGallery.map((item) => (
+              <Link
+                key={item.id}
+                href={`/gallery?remake=${item.id}`}
+                className="group relative aspect-[9/16] rounded-lg overflow-hidden border border-border bg-muted hover:border-primary/50 transition-all"
+              >
+                {item.thumbnail_url ? (
+                  <img
+                    src={item.thumbnail_url}
+                    alt="Gallery video"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                    <Video className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <span className="text-white/70 text-xs capitalize bg-white/20 px-2 py-0.5 rounded">
+                      {item.video_type?.replace("_", " ")}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-white/70 text-xs flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {item.views || 0}
+                      </span>
+                      <span className="text-white/70 text-xs flex items-center gap-1">
+                        <MessageCircle className="h-3 w-3" />
+                        {item.remakes || 0}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+                      <Play className="h-5 w-5 text-white fill-white" />
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Library */}
       <section>
         <h2 className="text-lg font-semibold mb-4">Library</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
           {libraryItems.map((item) => (
             <Link
               key={item.title}

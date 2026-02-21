@@ -7,7 +7,17 @@ export const maxDuration = 120;
 const SCRIPT_SYSTEM_PROMPT = `You are a scriptwriter specializing in short-form social media content (15-60 seconds).
 Your scripts are for Instagram Reels featuring an AI avatar talking directly to camera.
 
-Guidelines:
+Your goal is to analyze the provided reference scripts and understand what makes them successful, then create new scripts that follow the same patterns:
+
+Analysis criteria for successful scripts:
+- Hook effectiveness: How does it grab attention in the first 2 seconds?
+- Tone and voice: What's the personality? (confessional, playful, authoritative, teasing)
+- Emotional triggers: What desire or pain point does it tap into?
+- Engagement patterns: How does it end? (question, challenge, teaser, curiosity gap)
+- Sentence structure: Short and punchy? Conversational? Authentic?
+- Language style: Direct address? Power words? Imperfect vs. polished?
+
+Guidelines for generating new scripts:
 - Write in a personal, confessional, teasing tone
 - Hook the viewer in the first 2 seconds
 - Use short sentences, direct address ("you")
@@ -41,7 +51,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       prompt,
-      referenceScripts,
+      referenceScripts: providedRefScripts,
       category,
       count = 5,
     } = body as {
@@ -51,13 +61,6 @@ export async function POST(request: Request) {
       count?: number;
     };
 
-    if (!prompt) {
-      return NextResponse.json(
-        { error: "A prompt is required to generate scripts" },
-        { status: 400 }
-      );
-    }
-
     const apiKey = await getDecryptedKey("anthropic");
     if (!apiKey) {
       return NextResponse.json(
@@ -66,16 +69,75 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build the user prompt
+    // Fetch top upvoted scripts - first try user's scripts, then community
+    let referenceScripts: string[] = [];
+    let referenceSource = "";
+    
+    // Try to get user's top scripts by upvotes
+    const { data: userTopScripts } = await supabase
+      .from("scripts")
+      .select("script_text, upvotes_count, category")
+      .eq("user_id", user.id)
+      .eq("is_archived", false)
+      .gt("upvotes_count", 0)
+      .order("upvotes_count", { ascending: false })
+      .limit(10);
+
+    if (userTopScripts && userTopScripts.length > 0) {
+      // Filter by category if provided
+      const filtered = category && category !== "general"
+        ? userTopScripts.filter(s => s.category === category)
+        : userTopScripts;
+      referenceScripts = filtered.slice(0, 5).map(s => s.script_text);
+      referenceSource = "your top scripts";
+    }
+
+    // If not enough user scripts, fallback to community top scripts
+    if (referenceScripts.length < 3) {
+      const { data: communityTopScripts } = await supabase
+        .from("scripts")
+        .select("script_text, upvotes_count, category")
+        .neq("user_id", user.id)
+        .eq("is_archived", false)
+        .gt("upvotes_count", 0)
+        .order("upvotes_count", { ascending: false })
+        .limit(10);
+
+      if (communityTopScripts && communityTopScripts.length > 0) {
+        const filtered = category && category !== "general"
+          ? communityTopScripts.filter(s => s.category === category)
+          : communityTopScripts;
+        const communityScripts = filtered.slice(0, 5).map(s => s.script_text);
+        
+        if (referenceScripts.length > 0) {
+          referenceScripts = [...referenceScripts, ...communityScripts].slice(0, 5);
+          referenceSource = "your top scripts and community top scripts";
+        } else {
+          referenceScripts = communityScripts;
+          referenceSource = "community top scripts";
+        }
+      }
+    }
+
+    // If still no reference scripts but prompt is missing, error
+    if (referenceScripts.length === 0 && !prompt) {
+      return NextResponse.json(
+        { error: "Please provide a prompt since you don't have any scripts with upvotes yet. Write some scripts and get upvotes to enable AI-powered generation!" },
+        { status: 400 }
+      );
+    }
+
+    // Build the user prompt with analysis
     let userPrompt = "";
 
-    if (referenceScripts && referenceScripts.length > 0) {
-      userPrompt += `Generate ${count} new scripts similar to these examples:\n\n`;
+    if (referenceScripts.length > 0) {
+      userPrompt += `Here are the top-performing scripts from ${referenceSource} (analyzed for what makes them successful):\n\n`;
       userPrompt += referenceScripts.map((s, i) => `${i + 1}. ${s}`).join("\n\n");
+      userPrompt += `\n\nAnalyze what makes these scripts successful (hooks, tone, engagement patterns, emotional triggers) and create ${count} new scripts that follow the same winning patterns.\n`;
     }
 
     if (prompt) {
-      userPrompt += `\n\nAdditional requirements: ${prompt}`;
+      userPrompt += `\nAdditional requirements: ${prompt}`;
     }
 
     if (category && category !== "general") {

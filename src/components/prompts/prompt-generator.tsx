@@ -109,7 +109,7 @@ export function PromptGenerator({ initialPrompts }: PromptGeneratorProps) {
         </TabsList>
 
         <TabsContent value="my-prompts" className="mt-6">
-          <div className="space-y-8 max-w-3xl">
+          <div className="space-y-8 max-w-3xl mx-auto">
             <Tabs defaultValue="single" className="w-full">
               <TabsList className="grid w-full grid-cols-2 max-w-xs">
                 <TabsTrigger value="single" className="gap-1.5">
@@ -205,13 +205,13 @@ export function PromptGenerator({ initialPrompts }: PromptGeneratorProps) {
         </TabsContent>
 
         <TabsContent value="dancing-reel" className="mt-6">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl mx-auto">
             <PromptLibrary videoType="dancing_reel" title="Dancing Reel" />
           </div>
         </TabsContent>
 
         <TabsContent value="talking-head" className="mt-6">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl mx-auto">
             <PromptLibrary videoType="talking_head" title="Talking Head" />
           </div>
         </TabsContent>

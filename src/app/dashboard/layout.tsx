@@ -209,7 +209,7 @@ export default function DashboardLayout({
       </main>
 
       {/* Footer */}
-      <Footer variant="dashboard" />
+      <Footer variant="public" />
     </div>
   );
 }
